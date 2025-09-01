@@ -50,7 +50,7 @@ export const metadata: Metadata = {
 
 const fetchKollywood = async (): Promise<ApiResponse> => {
   const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
-  const res = await fetch(`http://localhost:3000/api/kollywood`, {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/kollywood`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',

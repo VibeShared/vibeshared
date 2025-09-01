@@ -14,6 +14,8 @@ interface Bolly {
   description: string;
 }
 
+export const dynamic = "force-dynamic";
+
 interface ApiResponse {
   result: Bolly[];
 }
@@ -48,7 +50,7 @@ export const metadata: Metadata = {
 };
 
 const fetchBollywood = async (): Promise<ApiResponse> => {
-  const res = await fetch("http://localhost:3000/api/bollywood");
+  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/bollywood`);
   if (!res.ok) throw new Error("Failed to fetch Bollywood data");
   return res.json();
 };

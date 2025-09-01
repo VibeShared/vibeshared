@@ -19,13 +19,13 @@ interface ApiResponse {
 }
 
 const fetchBollywood = async (): Promise<ApiResponse> => {
-  const res = await fetch(`http://localhost:3000/api/bollywood`, { cache : 'no-store'});
+  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/bollywood`, { cache : 'no-store'});
   if (!res.ok) throw new Error("Failed to fetch Bollywood data");
   return res.json();
 };
 
 const fetchKollywood = async (): Promise<ApiResponse> => {
-  const res = await fetch(`http://localhost:3000/api/kollywood`, { cache : 'no-store'});
+  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/kollywood`, { cache : 'no-store'});
   if (!res.ok) throw new Error("Failed to fetch Kollywood data");
   return res.json();
 };
