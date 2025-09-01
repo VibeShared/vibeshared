@@ -1,0 +1,135 @@
+
+
+.main{
+  border : 0px solid blue;
+   height : auto;
+   margin-top: 90px;
+}
+.row{
+  border : 0px solid rgb(255, 5, 17);
+  height: 5rem;
+}
+.collection{
+  border : 0px solid rgb(255, 5, 17);
+  
+  width: 20rem;
+}
+.col{
+  border : 0px solid rgb(20, 27, 23);
+  justify-content: center;
+  display: flex;
+  padding: 0;
+  margin: 0;
+  
+}
+
+.kingcol{
+  border : 0px solid rgb(20, 27, 23);
+  position: relative;
+  height: 80px;
+  justify-content: center;
+  align-items: center;
+  width: 100px;
+  padding: 0;
+  margin: 0;
+  
+}
+.kingcol h3{
+  margin-top: 25px;
+  margin-left: 15px;
+
+}
+
+.head{
+  border : 0px solid rgb(255, 5, 17);
+  height: 2.8rem;
+}
+
+
+
+
+.card{
+  border : 0px solid rgb(255, 5, 17);
+  height: auto;
+}
+.card1{
+  border : 0px solid rgb(24, 4, 5);
+  height: auto;
+  width: 18rem;
+}
+.card2{
+  border : 0px solid rgb(10, 1, 2);
+  height: auto;
+  width: 18rem;
+}
+
+.tab{
+  border : 0px solid rgb(255, 5, 17);
+  height: 2.8rem;
+}
+
+.tab_item{
+  height: 20rem;
+}
+
+
+  .king{
+    height: 60px;
+    width: 100px;
+  }
+
+
+  @media (max-width: 767px) {
+
+
+     .img{
+    width: 183px;
+    height: 200px;
+  }
+
+  .card1{
+  border : 0px solid rgb(24, 4, 5);
+  height: 20rem;
+  width: 13rem;
+}
+  .card2{
+  border : 0px solid rgb(24, 4, 5);
+  height: auto;
+  width: 13rem;
+}
+
+  
+  }
+ 
+ 
+
+
+@media (max-width: 479px) {
+
+  .king{
+    height: 30px;
+    width: 30px;
+  }
+
+   .img{
+    width: 135px;
+    height: 230px;
+  }
+
+
+.card{
+  border : 0px solid rgb(255, 5, 17);
+  height: auto;
+}
+.card1{
+  border : 0px solid rgb(24, 4, 5);
+  height: auto;
+  width: 10rem;
+}
+.card2{
+  border : 0px solid rgb(10, 1, 2);
+  height: auto;
+  width: 10rem;
+}
+
+}

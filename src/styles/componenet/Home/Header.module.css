@@ -1,0 +1,85 @@
+/* Header.module.css */
+
+/* Navbar styling */
+.navbar {
+  padding: 0.6rem 1rem;
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #eaeaea;
+ 
+}
+
+/* Logo */
+.navbar-brand img {
+  max-height: 40px;
+  width: auto;
+}
+
+/* Nav links */
+.navbar-nav .nav-link {
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 0.6rem 1rem;
+  color: #333 !important;
+  transition: color 0.3s ease;
+}
+
+.navbar-nav .nav-link:hover {
+  color: #ff5722 !important;
+}
+
+/* Search button on mobile */
+.btn {
+  border: none;
+  background: transparent;
+  color: #333;
+}
+
+.btn:hover {
+  color: #ff5722;
+}
+
+/* Auth Button wrapper (desktop right align) */
+.float-end {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .float-end {
+    display: inline-block;
+    margin-left: auto;
+  }
+
+  .navbar-brand {
+    margin: 0 auto; /* center logo on small screen */
+  }
+
+  .navbar-nav {
+    text-align: center;
+  }
+
+  .offcanvas-body .nav-link {
+    padding: 0.8rem;
+    font-size: 1.1rem;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  /* Tablet screen adjustments */
+  .navbar-brand img {
+    max-height: 35px;
+  }
+
+  .navbar-nav .nav-link {
+    padding: 0.4rem 0.8rem;
+  }
+}
+
+@media (min-width: 992px) {
+  .float-end {
+    display: block !important;
+  }
+
+  .navbar-nav .nav-link {
+    font-size: 1.05rem;
+  }
+}

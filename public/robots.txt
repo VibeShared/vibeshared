@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Allow: /api/
+
+Disallow: /components/
+Disallow: /lib/
+Disallow: /styles/
+Disallow: /connections/
+
+Sitemap: https://vibeshared.com/sitemap.xml
+Host: https://vibeshared.com

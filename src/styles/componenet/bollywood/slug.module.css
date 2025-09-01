@@ -1,0 +1,70 @@
+.container{
+    /* border: 2px solid red; */
+    margin-top: 5.4rem;
+}
+/* .row{
+    border: 2px solid blue;
+    height: auto;
+} */
+.col{
+    /* border: 2px solid black; */
+    height: auto;
+    display: flex;
+    align-items: center;
+
+} 
+.release{
+     height: auto;
+    display: flex;
+    align-items: center;
+    margin-right: 100px;
+}
+.card{
+    width: 300px;
+}
+
+/* Adjust card image on small devices */
+@media (max-width: 767px) {
+  .card-img-top {
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  .cardMain{
+    display: flex;
+    justify-content: center;
+  }
+
+    .card{
+    width: 200px;
+}
+}
+
+/* Reduce font size on mobile for title */
+@media (max-width: 575px) {
+  h1.h3 {
+    font-size: 1.5rem;
+  }
+}
+
+/* Tablet screens: 768px - 991px */
+@media (min-width: 768px) and (max-width: 991px) {
+  .card-img-top {
+    width: 100%;
+    height: auto;
+  }
+  .card{
+    width: 250px;
+}
+
+  .ratio-16x9 {
+    height: auto;
+    min-height: 250px; /* Ensure video is not too small */
+  }
+
+  h1.h4 {
+    font-size: 1.8rem; /* Slightly bigger title on tablets */
+  }
+}
+
+

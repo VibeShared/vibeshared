@@ -1,0 +1,12 @@
+
+
+.card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
+}
+
+.card:hover {
+  transform: scale(1.05);              /* zoom effect */
+  box-shadow: 0px 8px 20px rgba(0,0,0,0.3);  /* shadow effect */
+   background-color: lightgray;
+}
