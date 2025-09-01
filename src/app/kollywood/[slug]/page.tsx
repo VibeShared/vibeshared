@@ -85,7 +85,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   const id = slug;
 
   const fetchKollywood = async (): Promise<ApiResponse> => {
-    const res = await fetch(`http://localhost:3000/api/kollywood/${id}`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/kollywood/${id}`, {
       cache: "no-store",
     });
 

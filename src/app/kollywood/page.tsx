@@ -27,11 +27,11 @@ export const metadata: Metadata = {
     title: "Kollywood Movies ",
     description:
       "Browse Kollywood movies with details, posters, and ratings on Vibe Shared. Stay up-to-date with Tamil cinema releases.",
-    url: "https://vibeshared.com/kollywood",
+    url: `${process.env.NEXT_PUBLIC_BASE_URL}/kollywood`,
     siteName: "Vibe Shared",
     images: [
       {
-        url: "https://vibeshared.com/icons/og-image.png", // replace with your actual banner/poster
+        url: `${process.env.NEXT_PUBLIC_BASE_URL}/icons/og-image.png`, // replace with your actual banner/poster
         width: 1200,
         height: 630,
         alt: "Kollywood Movies on Vibe Shared",
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     title: "Kollywood Movies ",
     description:
       "Discover Kollywood movies, posters, and release updates on Vibe Shared.",
-    images: ["https://vibeshared.com/icons/og-image.png"],
+    images: [`${process.env.NEXT_PUBLIC_BASE_URL}/icons/og-image.png`],
   },
 };
 

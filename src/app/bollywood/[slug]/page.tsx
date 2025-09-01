@@ -33,7 +33,7 @@ export async function generateMetadata(
     openGraph: {
       title: movie.name,
       description: movie.description,
-      url: `https://yourdomain.com/bollywood/${id}`,
+      url: `${process.env.NEXT_PUBLIC_BASE_URL}/bollywood/${id}`,
       type: "video.movie",
       images: [
         {
@@ -68,7 +68,7 @@ export async function generateMetadata(
         },
         "potentialAction": {
           "@type": "WatchAction",
-          "target": `https://yourdomain.com/bollywood/${id}`
+          "target": `${process.env.NEXT_PUBLIC_BASE_URL}/bollywood/${id}`
         }
       })
     }
@@ -89,7 +89,7 @@ export default async function Page({ params } : any) {
   const { slug } = await  params;
 
   const fetchBollywood = async (): Promise<ApiResponse> => {
-    const res = await fetch(`http://localhost:3000/api/bollywood/${slug}`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/bollywood/${slug}`, {
       cache: "no-store",
     });
 
