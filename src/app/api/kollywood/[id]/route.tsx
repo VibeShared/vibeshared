@@ -4,15 +4,13 @@ import Kollywood from "@/lib/models/kollywood";
 import connectdb from "@/lib/Connect";
 
 export async function GET(
- request: Request,
-  context: { params: { id: string } }
-
-
+  _req: Request,
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-        const { id } = context.params;
-      
-    await  mongoose.connect(connectdb)
+    const { id } = await context.params;
+
+    await mongoose.connect(connectdb);
 
     const result = await Kollywood.findById(id);
 

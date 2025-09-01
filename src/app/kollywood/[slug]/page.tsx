@@ -75,13 +75,14 @@ export async function generateMetadata(
 }
 
 
-export default async function Page({ params }: { params:{ slug: string } }) {
-  interface ApiResponse {
-    result: Kolly;
-  }
-  
+interface ApiResponse {
+  result: Kolly;
+}
 
-  const id = params.slug; 
+export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
+  
+  const { slug } = await params;
+  const id = slug;
 
   const fetchKollywood = async (): Promise<ApiResponse> => {
     const res = await fetch(`http://localhost:3000/api/kollywood/${id}`, {

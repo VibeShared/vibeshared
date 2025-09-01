@@ -18,6 +18,63 @@ interface Bolly {
 
 
 
+export async function generateMetadata(
+  { params }: { params: Promise<{ slug: string }> }
+): Promise<Metadata> {
+  const { slug } = await params; // ✅ await the params object
+  const id = slug;
+  const res = await fetch(`http://localhost:3000/api/bollywood/${id}`, { cache: "no-store" });
+  const data = await res.json();
+  const movie = data.result;
+
+  return {
+    title: `${movie.name} | Bollywood Movies`,
+    description: movie.description,
+    openGraph: {
+      title: movie.name,
+      description: movie.description,
+      url: `https://yourdomain.com/bollywood/${id}`,
+      type: "video.movie",
+      images: [
+        {
+          url: movie.image,
+          alt: movie.name,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: movie.name,
+      description: movie.description,
+      images: [movie.image],
+    },
+    other: {
+     
+      "application/ld+json": JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Movie",
+        "name": movie.name,
+        "image": movie.image,
+        "description": movie.description,
+        "datePublished": movie.release,
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "likeValue": (movie.likes / 10).toFixed(1), // Example: converting likes to rating
+          "likeCount": movie.likes
+        },
+        "author": {
+          "@type": "Organization",
+          "name": "Vibe Shared"
+        },
+        "potentialAction": {
+          "@type": "WatchAction",
+          "target": `https://yourdomain.com/bollywood/${id}`
+        }
+      })
+    }
+  };
+}
+
 
 
 

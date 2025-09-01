@@ -23,6 +23,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
+   metadataBase: new URL("http://localhost:3000/"),
   title: {
     default: "Vibe Shared",
     template: "%s | Vibe Shared", // Page titles will use this pattern
