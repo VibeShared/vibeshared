@@ -5,7 +5,7 @@ import Link from "next/link";
 import React, { useState } from "react";
 import { Search } from "lucide-react";
 import SearchBox from "@/componenets/Home/SearchBox";
-import AuthButton from "@/componenets/Home/AuthButton";
+import AuthButton from "@/app/(auth)/login/AuthButton";
 import styles from "@/styles/componenet/Home/Header.module.css";
 
 export default function Header() {
