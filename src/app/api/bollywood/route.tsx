@@ -17,3 +17,21 @@ export async function GET() {
     return NextResponse.json({ error: "Failed to fetch data" }, { status: 500 });
   }
 }
+
+export async function POST(request: Request) {
+  try {
+    await mongoose.connect(connectdb);
+
+    const body = await request.json(); // get data from request body
+    const newMovie = new Bollywood(body);
+    await newMovie.save();
+
+    return NextResponse.json(
+      { message: "Movie created successfully", movie: newMovie },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Error creating Bollywood movie:", error);
+    return NextResponse.json({ error: "Failed to create movie" }, { status: 500 });
+  }
+}

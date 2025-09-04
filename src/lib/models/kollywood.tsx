@@ -9,6 +9,11 @@ interface Kollywod extends Document {
   likedBy: string[];
   day: string[];
   description: string;
+  director: string;
+  stars: string;
+  writer: string;
+  iframe: string;
+
 }
 
 // 2. Define the schema (with correct collection name to avoid pluralizing)
@@ -21,6 +26,10 @@ const kollywoodSchema = new Schema<Kollywod>(
     likes: { type: Number,},
     day: { type: [String], default:[] },
     description: { type: String, },
+    director: { type: String,  },
+    stars: { type: String,  },
+    writer: { type: String,  },
+    iframe: { type: String,  },
   },
   { collection: "Kollywood" } // prevent Mongoose from using 'bollywoods'
 );

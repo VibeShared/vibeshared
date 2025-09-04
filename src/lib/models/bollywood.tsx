@@ -9,6 +9,10 @@ interface IBollywood extends Document {
   likedBy: string[];
   day: string[];
   description: string;
+  director: string;
+  stars: string;
+  writer: string;
+  iframe: string;
   
   
 }
@@ -16,13 +20,17 @@ interface IBollywood extends Document {
 // 2. Define the schema (with correct collection name to avoid pluralizing)
 const bollywoodSchema = new Schema<IBollywood>(
   {
-    name: { type: String, required: true },
-    release: { type: String, required: true },
-    likes: { type: Number, default: 0 },
+    name: { type: String, },
+    release: { type: String, },
+    image: { type: String,  },
     likedBy: [{ type: String }],
-    description: { type: String },
-    image: { type: String },
-    day: { type: [String], default: [] }, // ✅ ensures it's always in API
+    likes: { type: Number,},
+    day: { type: [String], default:[] },
+    description: { type: String, },
+    director: { type: String,  },
+    stars: { type: String,  },
+    writer: { type: String,  },
+    iframe: { type: String,  }, // ✅ ensures it's always in API
     
   },
   { collection: "Bollywood" } // prevent Mongoose from using 'bollywoods'

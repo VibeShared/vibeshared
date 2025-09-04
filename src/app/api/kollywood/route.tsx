@@ -14,3 +14,23 @@ export async function GET() {
     return NextResponse.json({ error: "Failed to fetch data" }, { status: 500 });
   }
 }
+
+
+export async function POST(request: Request) {
+  try {
+    await mongoose.connect(connectdb);
+
+    const body = await request.json(); // parse body
+    const newMovie = new Kollywood(body);
+
+    await newMovie.save();
+
+    return NextResponse.json(
+      { message: "Kollywood movie created successfully", result: newMovie },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Error creating kollywood movie:", error);
+    return NextResponse.json({ error: "Failed to create movie" }, { status: 500 });
+  }
+}
