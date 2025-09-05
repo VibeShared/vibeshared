@@ -25,7 +25,7 @@ export default function AuthButton() {
   if (!session) {
     return (
       <button
-        onClick={() => signIn('google')}
+        onClick={() => signIn('')}
         className={`${styles.sign} btn btn-outline-primary fw-semibold`}
       >
         Sign in
