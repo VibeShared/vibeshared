@@ -1,4 +1,5 @@
 import React from 'react'
+import Link from 'next/link'
 
 export default function Footer() {
   return (
@@ -8,6 +9,7 @@ export default function Footer() {
       <div className="col-md-4 mb-3">
         <h5>About Us</h5>
         <p>VibeShared is source for the latest Movies and entertainment updates.</p>
+        <p><Link href='/privacy'>Privacy Policy</Link></p>
       </div>
       <div className="col-md-4 mb-3">
         <h5>Quick Links</h5>
