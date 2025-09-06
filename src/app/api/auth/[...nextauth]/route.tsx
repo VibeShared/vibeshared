@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import FacebookProvider from "next-auth/providers/facebook";
+import TwitterProvider from "next-auth/providers/twitter";
 import mongoose from "mongoose";
 import connectdb from "@/lib/Connect";
 import User from "@/lib/models/User";
@@ -14,6 +15,10 @@ const handler = NextAuth({
     FacebookProvider({
     clientId: process.env.FACEBOOK_CLIENT_ID as string,
     clientSecret: process.env.FACEBOOK_CLIENT_SECRET as string ,
+  }),
+  TwitterProvider({
+    clientId: process.env.TWITTER_CLIENT_ID as string,
+    clientSecret: process.env.TWITTER_CLIENT_SECRET as string,
   })
   ],
   callbacks: {
