@@ -5,7 +5,6 @@
   padding: 0.6rem 1rem;
   background-color: #ffffff !important;
   border-bottom: 1px solid #eaeaea;
- 
 }
 
 /* Logo */
@@ -83,3 +82,94 @@
     font-size: 1.05rem;
   }
 }
+
+/* ✅ Fix for very small screens (max 320px) */
+/* Extra small screens fix (<= 320px) */
+@media (max-width: 320px) {
+  /* Hide text beside logo */
+  .navbar-brand span {
+    display: none !important;
+  }
+
+  /* Smaller logo */
+  .navbar-brand img {
+    max-height: 28px !important;
+    width: auto !important;
+  }
+
+  /* Force mobile search + auth stack */
+  .mobileControls {
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    gap: 6px !important;
+  }
+
+  /* Reduce button size */
+  .btn {
+    padding: 0.2rem 0.3rem !important;
+    font-size: 0.85rem !important;
+  }
+
+  /* Make offcanvas smaller */
+  .offcanvas {
+    width: 200px !important;
+  }
+}
+
+
+/* For very small screens <= 340px */
+@media (max-width: 340px) {
+  /* Hide text beside logo */
+  .navbar-brand span {
+    display: none !important;
+  }
+
+  /* Smaller logo */
+  .navbar-brand img {
+    max-height: 28px !important;
+    width: auto !important;
+  }
+
+  /* Mobile controls: new row below logo */
+  .mobileControls {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: flex-end !important;
+    gap: 6px;
+    padding: 4px 10px;
+  }
+
+  .mobileControls .btn,
+  .mobileControls button {
+    padding: 0.25rem 0.4rem !important;
+    font-size: 0.85rem !important;
+  }
+
+  .offcanvas {
+    width: 200px !important;
+  }
+
+   /* Center logo */
+  .navbar-brand {
+    margin: 0 auto !important;
+  }
+
+  .navbar-brand span {
+    display: none !important; /* hide text beside logo */
+  }
+
+  .navbar-brand img {
+    max-height: 28px !important;
+  }
+
+  /* Mobile controls under logo */
+  .mobileControls {
+    display: flex !important;
+    justify-content: center !important;
+    gap: 10px;
+    padding: 4px 0;
+  }
+}
+
+
+

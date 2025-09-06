@@ -30,33 +30,34 @@ export default function Header() {
           </button>
 
           {/* Logo */}
-          <Link
-            className="navbar-brand d-flex align-items-center"
-            href="/"
-            aria-label="Vibe Shared Home"
-          >
-            <Image
-              src="/VibeShared.png"
-              width={100}
-              height={40}
-              alt="Vibe Shared Logo"
-              priority
-            />
-            <span className="ms-2 fw-bold d-none d-sm-inline">VibeShared</span>
-          </Link>
+          <div className="mx-auto d-lg-flex align-items-center">
+            <Link
+              className="navbar-brand d-flex align-items-center"
+              href="/"
+              aria-label="Vibe Shared Home"
+            >
+              <Image
+                src="/VibeShared.png"
+                width={80}
+                height={30}
+                alt="Vibe Shared Logo"
+                priority
+              />
+              <span className="ms-2 fw-bold d-none d-sm-inline">
+                VibeShared
+              </span>
+            </Link>
+          </div>
 
-          {/* Mobile Search Button + AuthButton wrapper */}
-          <div className="d-flex align-items-center d-lg-none ms-auto">
-            {/* Mobile Search Button */}
+          {/* Mobile Controls (Search + Auth) */}
+          <div className={`${styles.mobileControls} d-lg-none`}>
             <button
-              className="btn me-2"
+              className="btn"
               aria-label="Open search"
               onClick={() => setShowSearch(!showSearch)}
             >
               <Search size={22} />
             </button>
-
-            {/* Mobile Auth Button */}
             <AuthButton />
           </div>
 
@@ -100,52 +101,52 @@ export default function Header() {
 
       {/* Offcanvas Menu */}
       <div
-  className="offcanvas offcanvas-start"
-  tabIndex={-1}
-  id="mobileMenu"
-  aria-labelledby="mobileMenuLabel"
->
-  <div className="offcanvas-header">
-    <h5 id="mobileMenuLabel">Menu</h5>
-    <button
-      type="button"
-      className="btn-close"
-      data-bs-dismiss="offcanvas"
-      aria-label="Close"
-    ></button>
-  </div>
-  <div className="offcanvas-body">
-    <ul className="navbar-nav">
-      <li className="nav-item">
-        <Link
-          className="nav-link fw-semibold"
-          href="/"
-          onClick={() => window.location.href = "/"} // Reload page
-        >
-          Home
-        </Link>
-      </li>
-      <li className="nav-item">
-        <Link
-          className="nav-link fw-semibold"
-          href="/bollywood"
-          onClick={() => window.location.href = "/bollywood"} // Reload page
-        >
-          Bollywood
-        </Link>
-      </li>
-      <li className="nav-item">
-        <Link
-          className="nav-link fw-semibold"
-          href="/kollywood"
-          onClick={() => window.location.href = "/kollywood"} // Reload page
-        >
-          Kollywood
-        </Link>
-      </li>
-    </ul>
-  </div>
-</div>
+        className="offcanvas offcanvas-start"
+        tabIndex={-1}
+        id="mobileMenu"
+        aria-labelledby="mobileMenuLabel"
+      >
+        <div className="offcanvas-header">
+          <h5 id="mobileMenuLabel">Menu</h5>
+          <button
+            type="button"
+            className="btn-close"
+            data-bs-dismiss="offcanvas"
+            aria-label="Close"
+          ></button>
+        </div>
+        <div className="offcanvas-body">
+          <ul className="navbar-nav">
+            <li className="nav-item">
+              <Link
+                className="nav-link fw-semibold"
+                href="/"
+                onClick={() => (window.location.href = "/")}
+              >
+                Home
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link
+                className="nav-link fw-semibold"
+                href="/bollywood"
+                onClick={() => (window.location.href = "/bollywood")}
+              >
+                Bollywood
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link
+                className="nav-link fw-semibold"
+                href="/kollywood"
+                onClick={() => (window.location.href = "/kollywood")}
+              >
+                Kollywood
+              </Link>
+            </li>
+          </ul>
+        </div>
+      </div>
     </header>
   );
 }
