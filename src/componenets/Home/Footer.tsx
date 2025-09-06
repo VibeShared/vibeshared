@@ -16,16 +16,16 @@ export default function Footer() {
       <div className="col-md-4 mb-3">
         <h5>Quick Links</h5>
         <ul className="list-unstyled">
-          <li><a href="/" className="text-light text-decoration-none">Home</a></li>
-          <li><a href="/bollywood" className="text-light text-decoration-none">Bollywood</a></li>
-          <li><a href="/kollywood" className="text-light text-decoration-none">Kollywood</a></li>
+          <li><Link href="/" className="text-light text-decoration-none">Home</Link></li>
+          <li><Link href="/bollywood" className="text-light text-decoration-none">Bollywood</Link></li>
+          <li><Link href="/kollywood" className="text-light text-decoration-none">Kollywood</Link></li>
         </ul>
       </div>
       <div className="col-md-4 mb-3">
         <h5>Follow Us</h5>
-        <a href="https://www.facebook.com/profile.php?id=61579951700251https://www.facebook.com/profile.php?id=61579715311716" className="text-light me-3"><i className="bi bi-facebook"></i></a>
-        <a href="https://x.com/VibeShared" className="text-light me-3"><i className="bi bi-twitter"></i></a>
-        <a href="https://www.instagram.com/vibe_shared/" className="text-light"><i className="bi bi-instagram"></i></a>
+        <Link href="https://www.facebook.com/profile.php?id=61579951700251https://www.facebook.com/profile.php?id=61579715311716" className="text-light me-3"><i className="bi bi-facebook"></i></Link>
+        <Link href="https://x.com/VibeShared" className="text-light me-3"><i className="bi bi-twitter"></i></Link>
+        <Link href="https://www.instagram.com/vibe_shared/" className="text-light"><i className="bi bi-instagram"></i></Link>
       </div>
     </div>
     <div className="text-center mt-3">

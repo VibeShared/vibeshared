@@ -26,7 +26,7 @@ export default function AuthButton() {
     return (
       <button
         onClick={() => signIn('')}
-        className={`${styles.sign} btn btn-outline-primary fw-semibold`}
+        className={`${styles.sign} btn btn-primary fw-semibold`}
       >
         Sign in
       </button>
