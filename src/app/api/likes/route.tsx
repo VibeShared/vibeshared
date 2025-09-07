@@ -1,4 +1,4 @@
-import type { NextApiRequest, NextApiResponse } from "next";
+import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
 import connectdb from "@/lib/Connect";
 import { Like, ILike } from "@/lib/models/Likes";
@@ -29,91 +29,121 @@ interface PopulatedLikeUser {
   image?: string;
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<LikeResponse | LikesCountResponse | { error: string }>
-) {
+// POST - Like/Unlike a post
+export async function POST(request: NextRequest) {
   try {
     await mongoose.connect(connectdb);
   } catch (error) {
     console.error("Database connection error:", error);
-    return res.status(500).json({ error: "Database connection failed" });
+    return NextResponse.json(
+      { error: "Database connection failed" },
+      { status: 500 }
+    );
   }
 
-  if (req.method === "POST") {
-    try {
-      const { userId, postId } = req.body as LikeRequest;
+  try {
+    const body: LikeRequest = await request.json();
+    const { userId, postId } = body;
 
-      // Validation
-      if (!userId || !postId) {
-        return res.status(400).json({ error: "User ID and Post ID are required" });
-      }
+    // Validation
+    if (!userId || !postId) {
+      return NextResponse.json(
+        { error: "User ID and Post ID are required" },
+        { status: 400 }
+      );
+    }
 
-      // Validate ObjectId format
-      if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(postId)) {
-        return res.status(400).json({ error: "Invalid User ID or Post ID format" });
-      }
+    // Validate ObjectId format
+    if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(postId)) {
+      return NextResponse.json(
+        { error: "Invalid User ID or Post ID format" },
+        { status: 400 }
+      );
+    }
 
-      // Check if post exists
-      const postExists = await Post.findById(postId);
-      if (!postExists) {
-        return res.status(404).json({ error: "Post not found" });
-      }
+    // Check if post exists
+    const postExists = await Post.findById(postId);
+    if (!postExists) {
+      return NextResponse.json(
+        { error: "Post not found" },
+        { status: 404 }
+      );
+    }
 
-      // Check if like exists
-      const existingLike = await Like.findOne({ userId, postId });
+    // Check if like exists
+    const existingLike = await Like.findOne({ userId, postId });
 
-      if (existingLike) {
-        // Unlike
-        await Like.deleteOne({ _id: existingLike._id });
-        
-        // Optionally update post like count if you have that field
-        await Post.findByIdAndUpdate(postId, { $inc: { likesCount: -1 } });
-        
-        return res.status(200).json({ message: "Post unliked" });
-      }
-
-      // Like
-      const like = await Like.create({ userId, postId });
+    if (existingLike) {
+      // Unlike
+      await Like.deleteOne({ _id: existingLike._id });
       
       // Optionally update post like count if you have that field
-      await Post.findByIdAndUpdate(postId, { $inc: { likesCount: 1 } });
+      await Post.findByIdAndUpdate(postId, { $inc: { likesCount: -1 } });
       
-      return res.status(201).json({ like });
-
-    } catch (error) {
-      console.error("Like API error:", error);
-      return res.status(500).json({ error: "Failed to like/unlike post" });
+      return NextResponse.json({ message: "Post unliked" });
     }
+
+    // Like
+    const like = await Like.create({ userId, postId });
+    
+    // Optionally update post like count if you have that field
+    await Post.findByIdAndUpdate(postId, { $inc: { likesCount: 1 } });
+    
+    return NextResponse.json({ like }, { status: 201 });
+
+  } catch (error) {
+    console.error("Like API error:", error);
+    return NextResponse.json(
+      { error: "Failed to like/unlike post" },
+      { status: 500 }
+    );
+  }
+}
+
+// GET - Get likes for a post
+export async function GET(request: NextRequest) {
+  try {
+    await mongoose.connect(connectdb);
+  } catch (error) {
+    console.error("Database connection error:", error);
+    return NextResponse.json(
+      { error: "Database connection failed" },
+      { status: 500 }
+    );
   }
 
-  if (req.method === "GET") {
-    try {
-      const { postId } = req.query;
+  try {
+    const { searchParams } = new URL(request.url);
+    const postId = searchParams.get("postId");
 
-      if (!postId || Array.isArray(postId)) {
-        return res.status(400).json({ error: "Post ID is required and must be a single value" });
-      }
-
-      if (!Types.ObjectId.isValid(postId)) {
-        return res.status(400).json({ error: "Invalid Post ID format" });
-      }
-
-      const likes = await Like.find({ postId })
-        .populate<{ userId: PopulatedLikeUser }>("userId", "name image")
-        .exec();
-
-      return res.status(200).json({ 
-        count: likes.length, 
-        users: likes 
-      });
-
-    } catch (error) {
-      console.error("Get Likes error:", error);
-      return res.status(500).json({ error: "Failed to fetch likes" });
+    if (!postId) {
+      return NextResponse.json(
+        { error: "Post ID is required" },
+        { status: 400 }
+      );
     }
-  }
 
-  res.setHeader("Allow", ["POST", "GET"]);
-  return res.status(405).json({ error: `Method ${req.method} not allowed` });
+    if (!Types.ObjectId.isValid(postId)) {
+      return NextResponse.json(
+        { error: "Invalid Post ID format" },
+        { status: 400 }
+      );
+    }
+
+    const likes = await Like.find({ postId })
+      .populate<{ userId: PopulatedLikeUser }>("userId", "name image")
+      .exec();
+
+    return NextResponse.json({ 
+      count: likes.length, 
+      users: likes 
+    });
+
+  } catch (error) {
+    console.error("Get Likes error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch likes" },
+      { status: 500 }
+    );
+  }
 }

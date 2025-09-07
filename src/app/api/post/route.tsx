@@ -1,4 +1,4 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import { NextRequest, NextResponse } from 'next/server';
 import connectdb from '@/lib/Connect';
 import Post, { IPost as PostType } from "@/lib/models/Post";
 import mongoose, { Types } from 'mongoose';
@@ -18,50 +18,73 @@ interface PostResponse extends Omit<PostType, 'userId'> {
   };
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<PostType | PostResponse[] | { error: string }>
-) {
-  await mongoose.connect(connectdb)
-
-  if (req.method === "POST") {
-    try {
-      const { userId, content, mediaUrl } = req.body as CreatePostRequest;
-      
-      if (!userId) {
-        return res.status(400).json({ error: "User ID is required" });
-      }
-
-      const post = new Post({ 
-        userId, 
-        content: content || '', 
-        mediaUrl: mediaUrl || '' 
-      });
-      await post.save();
-      return res.status(201).json(post);
-    } catch (error) {
-      console.error("Error creating post:", error);
-      return res.status(500).json({ error: "Failed to create post" });
-    }
+// POST - Create a new post
+export async function POST(request: NextRequest) {
+  try {
+    await mongoose.connect(connectdb);
+  } catch (error) {
+    console.error("Database connection error:", error);
+    return NextResponse.json(
+      { error: "Database connection failed" },
+      { status: 500 }
+    );
   }
 
-  if (req.method === "GET") {
-    try {
-      const posts = await Post.find()
-        .populate<{ userId: { _id: Types.ObjectId; username?: string; email?: string } }>(
-          "userId", 
-          "username email"
-        )
-        .sort({ createdAt: -1 })
-        .exec();
-      
-      return res.status(200).json(posts as PostResponse[]);
-    } catch (error) {
-      console.error("Error fetching posts:", error);
-      return res.status(500).json({ error: "Failed to fetch posts" });
+  try {
+    const body: CreatePostRequest = await request.json();
+    const { userId, content, mediaUrl } = body;
+    
+    if (!userId) {
+      return NextResponse.json(
+        { error: "User ID is required" },
+        { status: 400 }
+      );
     }
+
+    const post = new Post({ 
+      userId, 
+      content: content || '', 
+      mediaUrl: mediaUrl || '' 
+    });
+    await post.save();
+    
+    return NextResponse.json(post, { status: 201 });
+  } catch (error) {
+    console.error("Error creating post:", error);
+    return NextResponse.json(
+      { error: "Failed to create post" },
+      { status: 500 }
+    );
+  }
+}
+
+// GET - Fetch all posts
+export async function GET(request: NextRequest) {
+  try {
+    await mongoose.connect(connectdb);
+  } catch (error) {
+    console.error("Database connection error:", error);
+    return NextResponse.json(
+      { error: "Database connection failed" },
+      { status: 500 }
+    );
   }
 
-  res.setHeader('Allow', ['GET', 'POST']);
-  return res.status(405).json({ error: `Method ${req.method} not allowed` });
+  try {
+    const posts = await Post.find()
+      .populate<{ userId: { _id: Types.ObjectId; username?: string; email?: string } }>(
+        "userId", 
+        "username email"
+      )
+      .sort({ createdAt: -1 })
+      .exec();
+    
+    return NextResponse.json(posts as PostResponse[]);
+  } catch (error) {
+    console.error("Error fetching posts:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch posts" },
+      { status: 500 }
+    );
+  }
 }

@@ -1,31 +1,51 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import { NextRequest, NextResponse } from 'next/server';
 import cloudinary from '@/lib/cloudinary';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method === "POST") {
-    try {
-      const { data } = req.body; // base64 file
-      
-      if (!data || typeof data !== 'string') {
-        return res.status(400).json({ error: "Invalid file data" });
-      }
-
-      const uploadResponse = await cloudinary.uploader.upload(data, {
-        folder: "social_app",
-        resource_type: "auto", // handles image/video
-      });
-
-      return res.status(200).json({ url: uploadResponse.secure_url });
-    } catch (error) {
-      console.error("Cloudinary upload error:", error);
-      return res.status(500).json({ error: "Upload failed" });
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { data } = body; // base64 file
+    
+    if (!data || typeof data !== 'string') {
+      return NextResponse.json(
+        { error: "Invalid file data" },
+        { status: 400 }
+      );
     }
+
+    const uploadResponse = await cloudinary.uploader.upload(data, {
+      folder: "social_app",
+      resource_type: "auto", // handles image/video
+    });
+
+    return NextResponse.json({ url: uploadResponse.secure_url });
+  } catch (error) {
+    console.error("Cloudinary upload error:", error);
+    return NextResponse.json(
+      { error: "Upload failed" },
+      { status: 500 }
+    );
   }
-  
-  // Handle other HTTP methods
-  res.setHeader('Allow', ['POST']);
-  return res.status(405).json({ error: `Method ${req.method} not allowed` });
+}
+
+// Optional: Add other HTTP methods if needed, or let them return 405 automatically
+export async function GET() {
+  return NextResponse.json(
+    { error: "Method not allowed" },
+    { status: 405 }
+  );
+}
+
+export async function PUT() {
+  return NextResponse.json(
+    { error: "Method not allowed" },
+    { status: 405 }
+  );
+}
+
+export async function DELETE() {
+  return NextResponse.json(
+    { error: "Method not allowed" },
+    { status: 405 }
+  );
 }
