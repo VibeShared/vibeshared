@@ -3,13 +3,16 @@
 import { useSession, signIn, signOut } from "next-auth/react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import styles from "@/styles/componenet/Home/AuthButton.module.css";
+
 
 export default function AuthButton() {
   const { data: session, status } = useSession();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-
+  const router = useRouter();
+  
   // ✅ Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -25,7 +28,7 @@ export default function AuthButton() {
   if (!session) {
     return (
       <button
-        onClick={() => signIn('')}
+        onClick={() => router.push("/login")}
         className={`${styles.sign} btn btn-primary fw-semibold`}
       >
         Sign in
@@ -34,6 +37,7 @@ export default function AuthButton() {
   }
 
   // ✅ If signed in
+  console.log(session)
   return (
     <div className="position-relative align-self-end" ref={menuRef}>
       <div
@@ -62,7 +66,10 @@ export default function AuthButton() {
         <div className={styles.dropdownMenu}>
           <p>{session.user?.name}</p>
           <button
-            onClick={() => signOut()}
+            onClick={() => {
+              signOut();
+             
+            }}
             className="btn btn-sm btn-outline-danger w-100"
           >
             Sign out

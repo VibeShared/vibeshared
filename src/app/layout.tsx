@@ -1,10 +1,10 @@
 // app/layout.tsx
 import "./globals.css";
 import type { Metadata } from "next";
-import SessionProvider from "@/componenets/Other/SessionWrapper";
+import SessionProvider from "@/componenets/hooks/SessionWrapper";
 import "bootstrap/dist/css/bootstrap.min.css";
 import Header from "@/componenets/Home/Header";
-import BootstrapClient from "@/componenets/Other/BootstrapClient";
+import BootstrapClient from "@/componenets/hooks/BootstrapClient";
 import Container from "@/componenets/Other/Container";
 import { Inter, Poppins } from "next/font/google";
 import Footer from "@/componenets/Home/Footer";
@@ -66,10 +66,13 @@ export default async function RootLayout({
         <BootstrapClient />
         <Container>
           <SessionProvider>
+           
             <Header />
             {children}
-            <Footer />
+           
           </SessionProvider>
+          
+            <Footer />
         </Container>
         <Analytics />
       </body>

@@ -7,7 +7,7 @@ export default function BootstrapClient() {
     if (typeof window !== "undefined") {
       import("bootstrap/dist/js/bootstrap.bundle.min.js" as any)
         .then(() => {
-          console.log("✅ Bootstrap JS loaded on client");
+         
         })
         .catch((err) => console.error("Bootstrap import failed", err));
     }
