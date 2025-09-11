@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
-import connectdb from "@/lib/Connect";
+import {connectDB} from "@/lib/Connect";
 import { Like, ILike } from "@/lib/models/Likes";
 import Post from "@/lib/models/Post";
 import { Types } from "mongoose";
@@ -32,7 +32,7 @@ interface PopulatedLikeUser {
 // POST - Like/Unlike a post
 export async function POST(request: NextRequest) {
   try {
-    await mongoose.connect(connectdb);
+    await connectDB();
   } catch (error) {
     console.error("Database connection error:", error);
     return NextResponse.json(
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
 // GET - Get likes for a post
 export async function GET(request: NextRequest) {
   try {
-    await mongoose.connect(connectdb);
+    await connectDB();
   } catch (error) {
     console.error("Database connection error:", error);
     return NextResponse.json(

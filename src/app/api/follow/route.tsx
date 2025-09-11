@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import  connectdb  from "@/lib/Connect";
+import  {connectDB}  from "@/lib/Connect";
 import { Follower } from "@/lib/models/Follower";
 import mongoose from "mongoose";
 
 // POST → Follow a user
 export async function POST(req: NextRequest) {
   try {
-    await mongoose.connect(connectdb);
+    await connectDB();
     const { followerId, followingId } = await req.json();
 
     if (!followerId || !followingId) {
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 // DELETE → Unfollow a user
 export async function DELETE(req: NextRequest) {
   try {
-    await mongoose.connect(connectdb);
+    await connectDB();
     const { followerId, followingId } = await req.json();
 
     if (!followerId || !followingId) {
@@ -50,7 +50,7 @@ export async function DELETE(req: NextRequest) {
 // GET → Fetch followers or following
 export async function GET(req: NextRequest) {
   try {
-    await mongoose.connect(connectdb);
+    await connectDB();
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("userId");
     const type = searchParams.get("type"); // "followers" or "following"

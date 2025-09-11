@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import  connectdb from "@/lib/Connect";
+import  {connectDB} from "@/lib/Connect";
 import { Follower } from "@/lib/models/Follower";
 import  Post  from "@/lib/models/Post";
 import mongoose, { Types } from "mongoose";
@@ -7,7 +7,7 @@ import mongoose, { Types } from "mongoose";
 // GET → Fetch feed for a user
 export async function GET(req: NextRequest) {
   try {
-    await mongoose.connect(connectdb);
+    await connectDB();
 
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("userId");

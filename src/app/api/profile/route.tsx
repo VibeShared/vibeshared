@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectdb from "@/lib/Connect";
+import {connectDB} from "@/lib/Connect";
 import { Profile, IProfile } from "@/lib/models/Profile";
 import { mongo, Types } from "mongoose";
 import mongoose from "mongoose";
@@ -19,7 +19,7 @@ interface ErrorResponse {
 // POST → Create or update profile
 export async function POST(req: NextRequest): Promise<NextResponse<IProfile | ErrorResponse>> {
   try {
-    await mongoose.connect(connectdb);
+    await connectDB();
     const body: CreateProfileRequest = await req.json();
 
     const { userId, username, bio, avatar } = body;
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<IProfile | Er
 // GET → Fetch profile by username or userId
 export async function GET(req: NextRequest): Promise<NextResponse<IProfile | ErrorResponse>> {
   try {
-    await mongoose.connect(connectdb);
+    await connectDB();
     const { searchParams } = new URL(req.url);
     const username = searchParams.get("username");
     const userId = searchParams.get("userId");
@@ -148,7 +148,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<IProfile | Err
 // DELETE → Delete profile
 export async function DELETE(req: NextRequest): Promise<NextResponse<{ message: string } | ErrorResponse>> {
   try {
-    await mongoose.connect(connectdb);
+    await connectDB();
     const { userId } = await req.json();
 
     if (!userId) {

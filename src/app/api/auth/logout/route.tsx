@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import connectdb from "@/lib/Connect";
+import {connectDB} from "@/lib/Connect";
 import User from "@/lib/models/User";
 import mongoose from "mongoose";
 
@@ -10,7 +10,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Refresh token required" }, { status: 400 });
     }
 
-    await mongoose.connect(connectdb);
+    await connectDB();
 
     // Remove refreshToken from DB
     const user = await User.findOneAndUpdate(

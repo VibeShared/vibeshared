@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
-import connectdb from "@/lib/Connect";
+import {connectDB} from "@/lib/Connect";
 import Otp from "@/lib/models/Otp";
 
 export async function POST(req: Request) {
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Email and OTP required" }, { status: 400 });
     }
 
-    await mongoose.connect(connectdb);
+    await connectDB();
 
     const record = await Otp.findOne({ email, otp });
     if (!record) {

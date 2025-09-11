@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
-import connectdb from "@/lib/Connect";
+import {connectDB} from "@/lib/Connect";
 import User from "@/lib/models/User";
 import jwt from "jsonwebtoken";
 
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await mongoose.connect(connectdb);
+    await connectDB();
 
     // Find user by email
     const user = await User.findOne({ email: email.toLowerCase().trim() });

@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
-import connectdb from "@/lib/Connect";
+import {connectDB} from "@/lib/Connect";
 import User from "@/lib/models/User";
 import Otp from "@/lib/models/Otp";
 
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Email, OTP, and new password required" }, { status: 400 });
     }
 
-    await mongoose.connect(connectdb);
+    await connectDB();
 
     // Validate OTP
     const record = await Otp.findOne({ email, otp });

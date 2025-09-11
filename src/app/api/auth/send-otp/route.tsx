@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import mongoose from "mongoose";
-import connectdb from "@/lib/Connect";
+import {connectDB} from "@/lib/Connect";
 import Otp from "@/lib/models/Otp";
 
 export async function POST(req: Request) {
@@ -11,7 +11,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Email required" }, { status: 400 });
     }
 
-    await mongoose.connect(connectdb);
+    await connectDB();
 
     // Generate random 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();

@@ -6,7 +6,7 @@ import FacebookProvider from "next-auth/providers/facebook";
 import TwitterProvider from "next-auth/providers/twitter";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
-import connectdb from "@/lib/Connect";
+import {connectDB} from "@/lib/Connect";
 import User from "@/lib/models/User";
 
 export const authOptions = {
@@ -18,7 +18,7 @@ export const authOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        await mongoose.connect(connectdb);
+        await connectDB();
         const user = await User.findOne({ email: credentials?.email });
         if (!user) return null;
 

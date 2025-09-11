@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectdb from '@/lib/Connect';
+import {connectDB} from '@/lib/Connect';
 import Post, { IPost as PostType } from "@/lib/models/Post";
 import mongoose, { Types } from 'mongoose';
 
@@ -21,7 +21,7 @@ interface PostResponse extends Omit<PostType, 'userId'> {
 // POST - Create a new post
 export async function POST(request: NextRequest) {
   try {
-    await mongoose.connect(connectdb);
+    await connectDB();
   } catch (error) {
     console.error("Database connection error:", error);
     return NextResponse.json(
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 // GET - Fetch all posts
 export async function GET(request: NextRequest) {
   try {
-    await mongoose.connect(connectdb);
+    await connectDB();
   } catch (error) {
     console.error("Database connection error:", error);
     return NextResponse.json(

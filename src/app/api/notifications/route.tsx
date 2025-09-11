@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import  connectdb  from "@/lib/Connect";
+import  {connectDB}  from "@/lib/Connect";
 import { Notification } from "@/lib/models/Notification";
 import mongoose from "mongoose";
 
 // POST → Create a notification
 export async function POST(req: NextRequest) {
   try {
-    await mongoose.connect(connectdb);
+    await connectDB();
     const { user, sender, type, postId } = await req.json();
 
     if (!user || !sender || !type) {
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 // GET → Fetch notifications for a user
 export async function GET(req: NextRequest) {
   try {
-    await mongoose.connect(connectdb);
+    await connectDB();
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("userId");
 
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
 // PATCH → Mark notifications as read
 export async function PATCH(req: NextRequest) {
   try {
-    await mongoose.connect(connectdb);
+    await connectDB();
     const { userId } = await req.json();
 
     if (!userId) {

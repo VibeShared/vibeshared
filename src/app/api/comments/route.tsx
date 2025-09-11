@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import  connectdb  from "@/lib/Connect";
+import  {connectDB}  from "@/lib/Connect";
 import { Comment, IComment } from "@/lib/models/Comment";
 import mongoose, { Types } from "mongoose";
 
@@ -32,7 +32,7 @@ interface ErrorResponse {
 // POST - Create a new comment
 export async function POST(request: NextRequest) {
   try {
-    await mongoose.connect(connectdb);
+    await connectDB();
     
     const body: CreateCommentRequest = await request.json();
     const { userId, postId, text } = body;
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
 // GET - Fetch comments for a post
 export async function GET(request: NextRequest) {
   try {
-    await mongoose.connect(connectdb);
+    await connectDB();
     
     const { searchParams } = new URL(request.url);
     const postId = searchParams.get("postId");
@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
 // DELETE - Delete a comment
 export async function DELETE(request: NextRequest) {
   try {
-    await mongoose.connect(connectdb);
+    await connectDB();
     
     const body: DeleteCommentRequest = await request.json();
     const { commentId, userId } = body;

@@ -1,7 +1,7 @@
 // src/app/api/auth/signup/route.ts
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import connectdb from "@/lib/Connect";
+import {connectDB} from "@/lib/Connect";
 import User from "@/lib/models/User";
 import mongoose from "mongoose";
 import Otp from "@/lib/models/Otp";
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       );
     }
 
-    await mongoose.connect(connectdb);
+    await connectDB();
 
 
     //     // ✅ Check if user exists

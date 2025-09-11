@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import mongoose from "mongoose";
-import connectdb from "@/lib/Connect";
+import {connectDB} from "@/lib/Connect";
 import Otp from "@/lib/models/Otp";
 import User from "@/lib/models/User";
 
@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     const { email } = await req.json();
     if (!email) return NextResponse.json({ error: "Email required" }, { status: 400 });
 
-    await mongoose.connect(connectdb);
+    await connectDB();
 
     const user = await User.findOne({ email });
     if (!user) {
