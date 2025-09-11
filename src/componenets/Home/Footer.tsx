@@ -8,10 +8,11 @@ export default function Footer() {
     <footer className="bg-dark text-light py-4 mt-5">
   <div className="container">
     <div className="row">
-      <div className="col-md-4 mb-3">
+      <div className="col-md-4 mb-1">
         <h5>About Us</h5>
         <p>VibeShared is source for the latest Movies and entertainment updates.</p>
         <p><Link href='/privacy'>Privacy Policy</Link></p>
+        <p><Link href='/terms&conditions'>terms&conditions</Link></p>
       </div>
       <div className="col-md-4 mb-3">
         <h5>Quick Links</h5>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
+import  Link  from "next/link";
 
 const signupSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -575,7 +576,7 @@ export default function SignupPage() {
             
             <div className="card-footer text-center py-3">
               <small className="text-muted">
-                By creating an account, you agree to our Terms of Service and Privacy Policy.
+                By creating an account, you agree to our <Link href="/terms&conditions" >Terms & Conditions</Link> and <Link href="privacy" >Privacy Policy</Link>.
               </small>
             </div>
           </div>

@@ -59,7 +59,7 @@ export default function ProfilePage() {
               console.log("New post created:", content)
             }
           />
-          <PostsFeed posts={mockPosts} userLocation={session?.user?.location} />
+          <PostsFeed posts={mockPosts} />
         </Col>
       </Row>
     </Container>
