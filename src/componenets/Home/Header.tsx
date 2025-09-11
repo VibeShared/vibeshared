@@ -2,68 +2,102 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import React, { useState } from "react";
-import { Search } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Search, X } from "lucide-react";
 import SearchBox from "@/componenets/Home/SearchBox";
 import AuthButton from "@/componenets/AuthButton";
 import styles from "@/styles/componenet/Home/Header.module.css";
 
 export default function Header() {
   const [showSearch, setShowSearch] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  // Handle scroll effect for navbar
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Close search when clicking outside (mobile)
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (showSearch && searchContainerRef.current && 
+          !searchContainerRef.current.contains(e.target as Node)) {
+        setShowSearch(false);
+      }
+    };
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showSearch]);
+
+  // Close search when pressing Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showSearch) {
+        setShowSearch(false);
+      }
+    };
+    
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [showSearch]);
 
   return (
     <header>
       <nav
-        className={`navbar navbar-expand-lg navbar-light shadow-sm fixed-top ${styles.navbar}`}
+        className={`navbar navbar-expand-lg fixed-top ${styles.navbar} ${
+          isScrolled ? styles.scrolled : ""
+        }`}
       >
         <div className="container">
-          {/* Mobile Menu Button */}
-          <button
-            className="navbar-toggler"
-            type="button"
-            data-bs-toggle="offcanvas"
-            data-bs-target="#mobileMenu"
-            aria-controls="mobileMenu"
-            aria-label="Toggle navigation"
-          >
-            <span className="navbar-toggler-icon"></span>
-          </button>
 
-          {/* Logo */}
-          <div className="mx-auto d-lg-flex align-items-center">
-            <Link
-              className="navbar-brand d-flex align-items-center"
-              href="/"
-              aria-label="Vibe Shared Home"
-            >
-              <Image
-                src="/VibeShared.png"
-                width={80}
-                height={30}
-                alt="Vibe Shared Logo"
-                priority
-              />
-              <span className="ms-2 fw-bold d-none d-sm-inline">
-                VibeShared
-              </span>
-            </Link>
-          </div>
-
-          {/* Mobile Controls (Search + Auth) */}
-          <div className={`${styles.mobileControls} d-lg-none`}>
+          {/* Mobile menu button */}
             <button
-              className="btn"
-              aria-label="Open search"
-              onClick={() => setShowSearch(!showSearch)}
+              className="navbar-toggler me-2 border-0"
+              type="button"
+              data-bs-toggle="offcanvas"
+              data-bs-target="#mobileMenu"
+              aria-controls="mobileMenu"
+              aria-label="Toggle navigation"
+              style={{ boxShadow: 'none' }}
             >
-              <Search size={22} />
+              <span className="navbar-toggler-icon"></span>
             </button>
-            <AuthButton />
+          
+
+          {/* Mobile controls (left side) */}
+          <div className="d-flex  align-items-center">
+            {/* Logo - Always visible */}
+          <Link
+            className="navbar-brand d-flex align-items-center"
+            href="/"
+            aria-label="Vibe Shared Home"
+          >
+            <Image
+              src="/VibeShared.png"
+              width={80}
+              height={30}
+              alt="Vibe Shared Logo"
+              priority
+              className={styles.logo}
+            />
+            <span className="ms-2 fw-bold d-none d-sm-inline">
+              VibeShared
+            </span>
+          </Link>
+
+           
           </div>
 
-          {/* Desktop Menu */}
-          <div className="collapse navbar-collapse justify-content-between">
-            <ul className="navbar-nav ms-4 mb-2 mb-lg-0">
+          {/* Desktop Menu & Search */}
+          <div className="collapse navbar-collapse">
+            {/* Navigation Links */}
+            <ul className="navbar-nav me-auto">
               <li className="nav-item">
                 <Link className="nav-link fw-semibold" href="/">
                   Home
@@ -82,24 +116,52 @@ export default function Header() {
             </ul>
 
             {/* Desktop Search */}
-            <div className="d-none d-lg-flex me-3">
+            <div className="d-none d-lg-flex me-4" style={{ maxWidth: "400px", width: "100%" }}>
               <SearchBox />
             </div>
 
-            {/* Auth Button (Desktop right side) */}
+            {/* Auth Button */}
+            <div className="d-none d-lg-flex">
+              <AuthButton />
+            </div>
+          </div>
+
+          {/* Mobile Auth Button (visible on mobile) */}
+          <div className="d-lg-none d-flex align-items-center">
+             {/* Mobile search toggle */}
+            <button
+              className="btn btn-link text-dark me-2 p-1"
+              aria-label={showSearch ? "Close search" : "Open search"}
+              onClick={() => setShowSearch(!showSearch)}
+            >
+              {showSearch ? <X size={22} /> : <Search size={22} />}
+            </button>
             <AuthButton />
           </div>
         </div>
+
+        {/* Mobile Search Box (appears below navbar) */}
+        {showSearch && (
+          <div 
+            ref={searchContainerRef}
+            className={`container-fluid py-3 d-lg-none ${styles.mobileSearch}`}
+          >
+            <div className="container position-relative">
+              <SearchBox />
+              <button
+                className="btn btn-sm position-absolute end-0 top-0 mt-2 me-2"
+                onClick={() => setShowSearch(false)}
+                aria-label="Close search"
+                style={{ zIndex: 10 }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+        )}
       </nav>
 
-      {/* Mobile Search Box */}
-      {showSearch && (
-        <div className="bg-white shadow-sm p-3 d-lg-none fixed-top mt-5">
-          <SearchBox />
-        </div>
-      )}
-
-      {/* Offcanvas Menu */}
+      {/* Offcanvas Mobile Menu */}
       <div
         className="offcanvas offcanvas-start"
         tabIndex={-1}
@@ -107,7 +169,16 @@ export default function Header() {
         aria-labelledby="mobileMenuLabel"
       >
         <div className="offcanvas-header">
-          <h5 id="mobileMenuLabel">Menu</h5>
+          <h5 id="mobileMenuLabel" className="offcanvas-title d-flex align-items-center">
+            <Image
+              src="/VibeShared.png"
+              width={60}
+              height={24}
+              alt="Vibe Shared Logo"
+              className="me-2"
+            />
+            Menu
+          </h5>
           <button
             type="button"
             className="btn-close"
@@ -119,27 +190,27 @@ export default function Header() {
           <ul className="navbar-nav">
             <li className="nav-item">
               <Link
-                className="nav-link fw-semibold"
+                className="nav-link fw-semibold py-3 border-bottom"
                 href="/"
-                onClick={() => (window.location.href = "/")}
+                data-bs-dismiss="offcanvas"
               >
                 Home
               </Link>
             </li>
             <li className="nav-item">
               <Link
-                className="nav-link fw-semibold"
+                className="nav-link fw-semibold py-3 border-bottom"
                 href="/bollywood"
-                onClick={() => (window.location.href = "/bollywood")}
+                data-bs-dismiss="offcanvas"
               >
                 Bollywood
               </Link>
             </li>
             <li className="nav-item">
               <Link
-                className="nav-link fw-semibold"
+                className="nav-link fw-semibold py-3 border-bottom"
                 href="/kollywood"
-                onClick={() => (window.location.href = "/kollywood")}
+                data-bs-dismiss="offcanvas"
               >
                 Kollywood
               </Link>
@@ -147,6 +218,9 @@ export default function Header() {
           </ul>
         </div>
       </div>
+
+      {/* Add spacer to prevent content from being hidden under fixed header */}
+      <div style={{ height: isScrolled ? '80px' : '100px' }}></div>
     </header>
   );
 }
