@@ -10,6 +10,10 @@ export interface IUser extends Document {
   refreshTokenExpiresAt?: Date;
   createdAt?: Date;
   updatedAt?: Date;
+   bio?: string;
+  location?: string;
+  website?: string;
+  cloudinary_id?: string;
 }
 
 const UserSchema = new Schema<IUser>({
@@ -21,6 +25,10 @@ const UserSchema = new Schema<IUser>({
         "https://res.cloudinary.com/dlcrwtyd3/image/upload/v1757470463/3135715_niwuv2.png", // default avatar
     },
   password: String,
+   cloudinary_id: String,
+  bio: { type: String, maxlength: 200 },
+  location: { type: String },
+  website: { type: String },
   accessToken: String,
   refreshToken: String,
   refreshTokenExpiresAt: {

@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import styles from "@/styles/componenet/Home/AuthButton.module.css";
 
 export default function AuthButton() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession(); // ✅ update available
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -23,6 +23,9 @@ export default function AuthButton() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // ✅ Refresh session whenever this component mounts
+ 
+
   // ✅ If not signed in
   if (!session) {
     return (
@@ -36,25 +39,25 @@ export default function AuthButton() {
   }
 
   // ✅ If signed in
-  console.log(session);
   return (
     <div className="position-relative align-self-end" ref={menuRef}>
       <div
         className={`${styles.authWrapper} d-flex align-items-center`}
         onClick={() => setOpen(!open)}
       >
-        {/* User Avatar (always visible) */}
+        {/* User Avatar */}
         {session.user?.image && (
           <Image
+            key={session.user.image} // force re-render on change
             src={session.user.image}
             alt={session.user.name || "User"}
             width={36}
             height={36}
             className={`${styles.authAvatar} rounded-circle`}
+            unoptimized // optional if using external domains
           />
         )}
 
-        {/* Username (hidden on xs, visible on sm and up) */}
         <span className={`${styles.authName} ms-2 d-none d-sm-inline`}>
           {session.user?.name?.split(" ")[0]}
         </span>
@@ -72,7 +75,7 @@ export default function AuthButton() {
           </div>
 
           <button
-            onClick={() => router.push("/profile")}
+            onClick={() => router.push(`/profile/${session.user.id}`)}
             className="dropdown-item d-flex align-items-center py-2"
           >
             <i className="bi bi-person me-2"></i>
@@ -90,8 +93,8 @@ export default function AuthButton() {
           <div className="dropdown-divider my-1"></div>
 
           <button
-            onClick={() => {
-              signOut();
+            onClick={async () => {
+              await signOut({ redirect: false }); // optional: prevent redirect
               setOpen(false);
             }}
             className="dropdown-item d-flex align-items-center py-2 text-danger"

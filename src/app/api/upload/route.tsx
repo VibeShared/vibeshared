@@ -1,51 +1,50 @@
-import { NextRequest, NextResponse } from 'next/server';
-import cloudinary from '@/lib/cloudinary';
+import { NextResponse, NextRequest } from "next/server";
+import cloudinary from "@/lib/cloudinary";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { connectDB } from "@/lib/Connect";
+import User from "@/lib/models/User";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { data } = body; // base64 file
-    
-    if (!data || typeof data !== 'string') {
-      return NextResponse.json(
-        { error: "Invalid file data" },
-        { status: 400 }
-      );
+    const session = await getServerSession(authOptions);
+
+    if (!session || !session.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const body = await request.json();
+    const { data } = body;
+
+    if (!data || typeof data !== "string") {
+      return NextResponse.json({ error: "Invalid file data" }, { status: 400 });
+    }
+
+    // 1️⃣ Fetch current user
+    await connectDB();
+    const user = await User.findById(session.user.id);
+
+    // 2️⃣ Delete previous image from Cloudinary if exists
+    if (user?.cloudinary_id) {
+      await cloudinary.uploader.destroy(user.cloudinary_id);
+    }
+
+    // 3️⃣ Upload new image
     const uploadResponse = await cloudinary.uploader.upload(data, {
-      folder: "social_app",
-      resource_type: "auto", // handles image/video
+      folder: `avatars/${session.user.id}`,
+      resource_type: "auto",
+      transformation: [{ quality: "auto", fetch_format: "auto" }],
     });
 
-    return NextResponse.json({ url: uploadResponse.secure_url });
+    // 4️⃣ Update user in DB with new URL and public_id
+    user!.image = uploadResponse.secure_url;
+    user!.cloudinary_id = uploadResponse.public_id;
+    await user!.save();
+
+    return NextResponse.json({ url: uploadResponse.secure_url, user });
   } catch (error) {
     console.error("Cloudinary upload error:", error);
-    return NextResponse.json(
-      { error: "Upload failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 }
 
-// Optional: Add other HTTP methods if needed, or let them return 405 automatically
-export async function GET() {
-  return NextResponse.json(
-    { error: "Method not allowed" },
-    { status: 405 }
-  );
-}
-
-export async function PUT() {
-  return NextResponse.json(
-    { error: "Method not allowed" },
-    { status: 405 }
-  );
-}
-
-export async function DELETE() {
-  return NextResponse.json(
-    { error: "Method not allowed" },
-    { status: 405 }
-  );
-}

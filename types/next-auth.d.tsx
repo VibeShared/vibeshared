@@ -7,13 +7,13 @@ declare module "next-auth" {
    */
   interface Session {
     user: {
-      id: string;
-      name?: string | null;
-      email?: string | null;
-      image?: string | null;
-      password?: string;
-      refreshToken?: string;
-      accessToken?: string;
+       id: string;
+      name: string;
+      email: string;
+      image?: string;
+      bio?: string;
+      location?: string;
+      website?: string;
     } & DefaultSession["user"];
   }
 

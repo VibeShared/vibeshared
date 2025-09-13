@@ -5,7 +5,6 @@ import GoogleProvider from "next-auth/providers/google";
 import FacebookProvider from "next-auth/providers/facebook";
 import TwitterProvider from "next-auth/providers/twitter";
 import bcrypt from "bcryptjs";
-import mongoose from "mongoose";
 import {connectDB} from "@/lib/Connect";
 import User from "@/lib/models/User";
 
@@ -46,24 +45,51 @@ export const authOptions = {
           clientSecret: process.env.TWITTER_CLIENT_SECRET!,
         }),
   ],
-  callbacks: {
-    async jwt({ token, user }: { token: any; user?: any }) {
-      if (user) {
-        token.id = user.id;
-        token.name = user.name;
-        token.email = user.email;
-        token.picture = user.image;
+callbacks: {
+  async jwt({ token, user, trigger }: { token: any; user?: any; trigger?: string }) {
+    // 🔑 First login → store all user data in token
+    if (user) {
+      token.id = user.id;
+      token.name = user.name;
+      token.email = user.email;
+      token.picture = user.image;
+      token.bio = user.bio ?? "";
+      token.location = user.location ?? "";
+      token.website = user.website ?? "";
+    }
+
+    // 🔄 If `update()` is called manually, refresh data from DB
+    if (trigger === "update") {
+      await connectDB();
+      const freshUser = await User.findById(token.id);
+      if (freshUser) {
+        token.name = freshUser.name;
+        token.picture = freshUser.image;
+        token.bio = freshUser.bio ?? "";
+        token.location = freshUser.location ?? "";
+        token.website = freshUser.website ?? "";
       }
-      return token;
-    },
-    async session({ session, token }: { session: any; token: any }) {
-      session.user.id = token.id;
-      session.user.name = token.name;
-      session.user.email = token.email;
-      session.user.image = token.picture;
-      return session;
-    },
+    }
+
+    return token;
   },
+
+  async session({ session, token }: { session: any; token: any }) {
+    // Just copy data from token → No DB call every time
+    session.user = {
+      id: token.id,
+      name: token.name,
+      email: token.email,
+      image: token.picture,
+      bio: token.bio,
+      location: token.location,
+      website: token.website,
+    };
+    return session;
+  },
+},
+
+
   session: { strategy: "jwt" as SessionStrategy },
   secret: process.env.AUTH_SECRET,
 };
