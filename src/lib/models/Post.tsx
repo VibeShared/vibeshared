@@ -1,20 +1,39 @@
-import mongoose from "mongoose";
-import { Document, Types } from 'mongoose';
+// lib/models/Post.ts
+import mongoose, { Document, Types } from 'mongoose';
 
-export interface IPost extends Document {
-  userId: Types.ObjectId;
-  content?: string; // Made optional since it's just "String" in schema
-  mediaUrl?: string; // Made optional since it's just "String" in schema
-  createdAt: Date;
+export interface IUser {
+  _id: Types.ObjectId;
+  username?: string;
+  email?: string;
+  name?: string;
 }
 
-
+export interface IPost extends Document {
+  userId: Types.ObjectId | IUser;
+  content: string;
+   cloudinary_id?: string; 
+  mediaUrl: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 const PostSchema = new mongoose.Schema<IPost>({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-  content: String,
-  mediaUrl: String,
-  createdAt: { type: Date, default: Date.now },
+  userId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: "User",
+    required: true 
+  },
+  cloudinary_id: String, 
+  content: {
+    type: String,
+    default: ''
+  },
+  mediaUrl: {
+    type: String,
+    default: ''
+  }
+}, {
+  timestamps: true
 });
 
 export default mongoose.models.Post || mongoose.model<IPost>("Post", PostSchema);

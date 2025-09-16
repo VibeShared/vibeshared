@@ -7,8 +7,9 @@ import Header from "@/componenets/Home/Header";
 import BootstrapClient from "@/componenets/hooks/BootstrapClient";
 import Container from "@/componenets/Other/Container";
 import { Inter, Poppins } from "next/font/google";
-import Footer from "@/componenets/Home/Footer";
+
 import { Analytics } from "@vercel/analytics/next"
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" />
 
 const inter = Inter({
   subsets: ["latin"],
@@ -71,8 +72,7 @@ export default async function RootLayout({
             {children}
            
           </SessionProvider>
-          
-            <Footer />
+        
         </Container>
         <Analytics />
       </body>

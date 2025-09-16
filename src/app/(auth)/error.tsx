@@ -10,9 +10,9 @@ export default function GlobalError({
   error: Error;
   reset: () => void;
 }) {
-  useEffect(() => {
-    console.error("Global error:", error);
-  }, [error]);
+  // useEffect(() => {
+  //   console.error("Global error:", error);
+  // }, [error]);
 
   return (
     

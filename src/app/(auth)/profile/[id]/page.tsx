@@ -10,12 +10,12 @@ export default async function ProfilePage({ params }: { params: { id: string } }
   const session = await getServerSession(authOptions);
 
 
-  // Mock Data
-const mockFriends = [
-  { id: 1, name: "Jane Doe", username: "jane", mutual: 12 },
-  { id: 2, name: "Sam Smith", username: "sam", mutual: 5 },
-  { id: 3, name: "Emma Brown", username: "emma", mutual: 8 },
-];
+//   // Mock Data
+// const mockFriends = [
+//   { id: 1, name: "Jane Doe", username: "jane", mutual: 12 },
+//   { id: 2, name: "Sam Smith", username: "sam", mutual: 5 },
+//   { id: 3, name: "Emma Brown", username: "emma", mutual: 8 },
+// ];
 
 
 
@@ -27,7 +27,7 @@ const mockFriends = [
           <div className="sticky-sidebar">
             <ProfileCardServer  />
             <div className="mt-4">
-              <FriendsList friends={mockFriends} />
+              {/* <FriendsList friends={mockFriends} /> */}
             </div>
           </div>
         </Col>

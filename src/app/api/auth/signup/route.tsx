@@ -3,8 +3,6 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import {connectDB} from "@/lib/Connect";
 import User from "@/lib/models/User";
-import mongoose from "mongoose";
-import Otp from "@/lib/models/Otp";
 
 export async function POST(req: Request) {
   try {

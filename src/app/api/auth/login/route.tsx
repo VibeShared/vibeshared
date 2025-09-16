@@ -51,13 +51,13 @@ export async function POST(req: NextRequest) {
     const accessToken = jwt.sign(
       { id: user._id, email: user.email },
       process.env.AUTH_SECRET!,
-      { expiresIn: "20m" } // short lived
+      { expiresIn: "30m" } // short lived
     );
 
     const refreshToken = jwt.sign(
       { id: user._id, email: user.email },
       process.env.AUTH_SECRET!,
-      { expiresIn: "7d" } // longer lived
+      { expiresIn: "30d" } // longer lived
     );
 
     // Optional: save refreshToken in DB

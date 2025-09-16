@@ -103,16 +103,7 @@ export default function Header() {
                   Home
                 </Link>
               </li>
-              <li className="nav-item">
-                <Link className="nav-link fw-semibold" href="/bollywood">
-                  Bollywood
-                </Link>
-              </li>
-              <li className="nav-item">
-                <Link className="nav-link fw-semibold" href="/kollywood">
-                  Kollywood
-                </Link>
-              </li>
+             
             </ul>
 
             {/* Desktop Search */}
@@ -197,24 +188,7 @@ export default function Header() {
                 Home
               </Link>
             </li>
-            <li className="nav-item">
-              <Link
-                className="nav-link fw-semibold py-3 border-bottom"
-                href="/bollywood"
-                data-bs-dismiss="offcanvas"
-              >
-                Bollywood
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link
-                className="nav-link fw-semibold py-3 border-bottom"
-                href="/kollywood"
-                data-bs-dismiss="offcanvas"
-              >
-                Kollywood
-              </Link>
-            </li>
+            
           </ul>
         </div>
       </div>

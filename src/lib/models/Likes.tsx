@@ -6,6 +6,7 @@ export interface ILike extends Document {
   userId: IUser["_id"];
   postId: IPost["_id"];
   createdAt: Date;
+  likesCount : number
 }
 
 const LikeSchema: Schema<ILike> = new Schema(
@@ -13,6 +14,10 @@ const LikeSchema: Schema<ILike> = new Schema(
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     postId: { type: Schema.Types.ObjectId, ref: "Post", required: true },
     createdAt: { type: Date, default: Date.now },
+    likesCount: {            // ✅ add this
+    type: Number,
+    default: 0,
+  }
   },
   { timestamps: true }
 );

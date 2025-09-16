@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
     // 3️⃣ Upload new image
     const uploadResponse = await cloudinary.uploader.upload(data, {
-      folder: `avatars/${session.user.id}`,
+      folder: `users/${session.user.id}`,
       resource_type: "auto",
       transformation: [{ quality: "auto", fetch_format: "auto" }],
     });

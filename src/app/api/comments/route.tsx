@@ -91,37 +91,37 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
-    
+
     const { searchParams } = new URL(request.url);
     const postId = searchParams.get("postId");
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "5");
 
     if (!postId) {
-      return NextResponse.json(
-        { error: "Post ID is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Post ID is required" }, { status: 400 });
     }
 
-    if (!Types.ObjectId.isValid(postId)) {
-      return NextResponse.json(
-        { error: "Invalid Post ID format" },
-        { status: 400 }
-      );
-    }
+    const skip = (page - 1) * limit;
 
     const comments = await Comment.find({ postId: new Types.ObjectId(postId) })
-      .populate<{ userId: PopulatedUser }>("userId", "name image")
-      .sort({ createdAt: -1 })
-      .exec();
+  .populate("userId", "name image")
+  .sort({ createdAt: -1 })
+  .skip(skip)
+  .limit(limit)
+  .lean();
 
-    return NextResponse.json(comments);
+    const total = await Comment.countDocuments({ postId });
+
+    return NextResponse.json({
+      comments,
+      total,
+      page,
+      hasMore: skip + comments.length < total,
+    });
 
   } catch (error) {
     console.error("Fetch Comments error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch comments" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch comments" }, { status: 500 });
   }
 }
 
