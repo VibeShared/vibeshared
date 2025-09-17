@@ -1,38 +1,49 @@
-// ProfilePage.tsx (SERVER component)
+// src/app/(auth)/profile/[id]/page.tsx
 import { Container, Row, Col } from "react-bootstrap";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import FriendsList from "@/componenets/profile/FriendsList";
+import User from "@/lib/models/User";
+import { connectDB } from "@/lib/Connect";
 import ProfileCardServer from "@/componenets/profile/ProfileCard";
-import InteractiveSection from "@/componenets/ProfileCard/InteractiveSection"; // ✅ new client wrapper
+import mongoose from "mongoose";
+import PostsFeed from "@/componenets/profile/PostsFeed";
+import CreatePost from "@/componenets/profile/CreatePost";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/authoptions";
 
-export default async function ProfilePage({ params }: { params: { id: string } }) {
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  await connectDB();
+
+  // ✅ Await params (Next.js 15 requirement)
+  const { id } = await params;
+
+  // Validate ID early
+  if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+    return <p>Invalid user ID</p>;
+  }
+
+  // Fetch user
+  const userDoc = await User.findById(id).lean();
+  if (!userDoc) {
+    return <p>User not found</p>;
+  }
+
+  // Build a plain JS object and ensure `id` exists
+  const plainProfile: any = JSON.parse(JSON.stringify(userDoc));
+  plainProfile.id = plainProfile._id?.toString();
+
+  // Get session and check ownership
   const session = await getServerSession(authOptions);
-
-
-//   // Mock Data
-// const mockFriends = [
-//   { id: 1, name: "Jane Doe", username: "jane", mutual: 12 },
-//   { id: 2, name: "Sam Smith", username: "sam", mutual: 5 },
-//   { id: 3, name: "Emma Brown", username: "emma", mutual: 8 },
-// ];
-
-
-
+  const isOwnProfile = session?.user?.id === plainProfile.id;
 
   return (
     <Container className="py-4">
       <Row>
-        <Col lg={4} className="mb-4">
-          <div className="sticky-sidebar">
-            <ProfileCardServer  />
-            <div className="mt-4">
-              {/* <FriendsList friends={mockFriends} /> */}
-            </div>
-          </div>
+        <Col lg={4}>
+          <ProfileCardServer profile={plainProfile} />
         </Col>
+
         <Col lg={8}>
-          <InteractiveSection /> {/* ✅ Client component */}
+          {isOwnProfile && <CreatePost isOwnProfile={true} />}
+          <PostsFeed userId={plainProfile.id} />
         </Col>
       </Row>
     </Container>

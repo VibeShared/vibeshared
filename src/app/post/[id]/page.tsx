@@ -38,9 +38,6 @@ async function getPostsByUser(userId: string) {
   return res.json();
 }
 
-
-
-
 export default async function UserPostsPage({
   params,
 }: {
@@ -62,8 +59,6 @@ export default async function UserPostsPage({
       </div>
     );
   }
-
- 
 
   return (
     <div className="container py-4">
@@ -92,15 +87,14 @@ export default async function UserPostsPage({
                   </strong>
                   <small className="text-muted">Posted recently</small>
                 </div>
-                <button className="btn btn-link text-muted ms-auto p-0">
+                <span className="btn btn-link text-muted ms-auto p-0">
                   <i className="bi bi-three-dots"></i>
                   <DeletePostButton
-  postId={post._id}
-  currentUserId={currentUserId}
-  postOwnerId={post.userId._id}
-/>
-                </button>
-               
+                    postId={post._id}
+                    currentUserId={currentUserId}
+                    postOwnerId={post.userId._id}
+                  />
+                </span>
               </div>
 
               {/* Post Content */}

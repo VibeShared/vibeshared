@@ -12,10 +12,14 @@ interface CloudinaryFile {
   userId: string;
 }
 
-export default function ProfilePage() {
+interface PostsFeedProps {
+  userId: string;
+}
+
+export default function ProfilePage({userId}: PostsFeedProps) {
   const router = useRouter();
   const params = useParams();
-  const userId = params?.id as string;
+  // const userId = params?.id as string;
 
   const [photos, setPhotos] = useState<CloudinaryFile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,7 +32,7 @@ export default function ProfilePage() {
         setLoading(true);
         const res = await fetch(`/api/user-media/${userId}`);
         const data = await res.json();
-        console.log("Fetched media:", data);
+        
         setPhotos(data.media || []);
       } catch (error) {
         console.error("Failed to fetch photos:", error);
@@ -45,10 +49,10 @@ export default function ProfilePage() {
       {/* Posts Tab will go here */}
 
       <Tab eventKey="photos" title="Photos">
-        <Card className="shadow-sm">
+        <Card className="shadow-sm ">
           <Card.Body>
             {loading ? (
-              <p className="text-muted">
+              <p className="text-muted"> 
                 Vibes... <span className="spinner-border"></span>
               </p>
             ) : photos.length === 0 ? (
@@ -58,7 +62,7 @@ export default function ProfilePage() {
                 {photos.map((photo, index) => (
                   <Col
                     xs={4}
-                    className="mb-3"
+                    className="mb-3 "
                     key={`${photo.postId}-${index}`} // ✅ unique key (postId + index)
                   >
                     <div

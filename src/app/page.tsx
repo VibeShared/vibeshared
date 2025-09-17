@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import LikeButton from "@/componenets/Other/LikeButton";
 import CommentSection from "@/componenets/Other/CommentSection";
 import { useSession } from "next-auth/react";
+import Link from 'next/link'
 
 export default function HomeFeed() {
   const [posts, setPosts] = useState<any[]>([]);
@@ -31,7 +32,12 @@ export default function HomeFeed() {
       }
 
       const data = await res.json();
-      setPosts((prev) => [...prev, ...data.posts]);
+      setPosts(((prev) => {
+  const newUniquePosts = data.posts.filter(
+    (newPost: any) => !prev.some((p) => p._id === newPost._id)
+  );
+  return [...prev, ...newUniquePosts];
+}));
       setHasMore(data.hasMore);
     } catch (error) {
       console.error("Error fetching posts:", error);
@@ -73,7 +79,6 @@ export default function HomeFeed() {
     );
   }
 
-  console.log(posts);
   return (
     <div className="container py-4">
       <div className="row justify-content-center">
@@ -85,20 +90,22 @@ export default function HomeFeed() {
             >
               {/* Header */}
               <div className="d-flex align-items-center mb-3">
-                <img
-                  src={post.userId?.image || "/default-avatar.png"}
-                  alt={post.userId?.name || "Anonymous"}
-                  width={48}
-                  height={48}
-                  className="rounded-circle border border-2 shadow-sm object-fit-cover"
-                />
-                <div className="ms-3">
-                  <strong className="d-block">{post.userId?.name}</strong>
-                  <small className="text-muted">
-                    {new Date(post.createdAt).toLocaleString()}
-                  </small>
-                </div>
-              </div>
+  <Link href={`/profile/${post.userId?._id ?? ""}`} className="d-flex align-items-center text-decoration-none">
+    <img
+      src={post.userId?.image || "/default-avatar.png"}
+      alt={post.userId?.name || "Unknown"}
+      width={48}
+      height={48}
+      className="rounded-circle object-fit-cover border border-2 border-white shadow-sm"
+    />
+    <div className="ms-3">
+      <strong className="d-block text-dark">
+        {post.userId?.name || "Anonymous"}
+      </strong>
+      <small className="text-muted">Posted recently</small>
+    </div>
+  </Link>
+</div>
 
               {/* Content */}
               <p className="mb-3">{post.content}</p>

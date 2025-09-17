@@ -4,14 +4,16 @@ import Image from "next/image";
 import Link from "next/link";
 import React, { useState, useEffect, useRef } from "react";
 import { Search, X } from "lucide-react";
-import SearchBox from "@/componenets/Home/SearchBox";
+
 import AuthButton from "@/componenets/AuthButton";
 import styles from "@/styles/componenet/Home/Header.module.css";
+
 
 export default function Header() {
   const [showSearch, setShowSearch] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
+
 
   // Handle scroll effect for navbar
   useEffect(() => {
@@ -107,28 +109,32 @@ export default function Header() {
             </ul>
 
             {/* Desktop Search */}
-            <div className="d-none d-lg-flex me-4" style={{ maxWidth: "400px", width: "100%" }}>
-              <SearchBox />
+            <div  className="d-none d-lg-flex me-4" >
+
+            <Link href={'/searchBox'} >
+             <i  className="bi bi-search"></i>
+            </Link>
             </div>
 
             {/* Auth Button */}
             <div className="d-none d-lg-flex">
-              <AuthButton />
+              {/* <AuthButton /> */}
             </div>
           </div>
 
           {/* Mobile Auth Button (visible on mobile) */}
-          <div className="d-lg-none d-flex align-items-center">
+          <Link href={'/searchBox'} className="d-lg-none d-flex align-items-center">
              {/* Mobile search toggle */}
             <button
+              
               className="btn btn-link text-dark me-2 p-1"
               aria-label={showSearch ? "Close search" : "Open search"}
               onClick={() => setShowSearch(!showSearch)}
             >
-              {showSearch ? <X size={22} /> : <Search size={22} />}
+              <Search size={22}/>
             </button>
+          </Link>
             <AuthButton />
-          </div>
         </div>
 
         {/* Mobile Search Box (appears below navbar) */}
@@ -138,7 +144,7 @@ export default function Header() {
             className={`container-fluid py-3 d-lg-none ${styles.mobileSearch}`}
           >
             <div className="container position-relative">
-              <SearchBox />
+             
               <button
                 className="btn btn-sm position-absolute end-0 top-0 mt-2 me-2"
                 onClick={() => setShowSearch(false)}

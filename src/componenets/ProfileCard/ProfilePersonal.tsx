@@ -1,3 +1,4 @@
+// src\componenets\ProfileCard\ProfilePersonal.tsx
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -42,58 +43,62 @@ interface UserProfile {
   website?: string | null;
 }
 
-export default function ProfileCard() {
-  const { data: session, update } = useSession();
-  const user = session?.user as UserProfile;
+interface ProfileCardProps {
+  user: UserProfile; // 👈 passed from page
+  isOwnProfile?: boolean; // 👈 true if viewing your own profile
+}
+
+export default function ProfileCard({
+  user,
+  isOwnProfile = false,
+}: ProfileCardProps) {
+ const { update } = useSession(); // ✅ only use update when saving changes
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastApiCallRef = useRef<number>(0);
 
   const [showEdit, setShowEdit] = useState(false);
   const [formData, setFormData] = useState({
-    name: "",
-    bio: "",
-    location: "",
-    website: "",
+    name: user.name || "",
+    bio: user.bio || "",
+    location: user.location || "",
+    website: user.website || "",
   });
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [showToast, setShowToast] = useState(false);
+  const [imagePreview, setImagePreview] = useState(user.image || "");
   const [toastMessage, setToastMessage] = useState("");
-  const [toastVariant, setToastVariant] = useState<"success" | "danger">(
-    "success"
-  );
-  const [imagePreview, setImagePreview] = useState("");
+  const [toastVariant, setToastVariant] = useState<"success" | "danger">("success");
+  const [showToast, setShowToast] = useState(false);
 
-  // Initialize form data from session
   useEffect(() => {
-    if (user) {
-      setFormData({
-        name: user.name || "",
-        bio: user.bio || "",
-        location: user.location || "",
-        website: user.website || "",
-      });
-      setImagePreview(user.image || "");
-    }
-  }, [user?.id]); // Only re-run when user id changes
+    setFormData({
+      name: user.name || "",
+      bio: user.bio || "",
+      location: user.location || "",
+      website: user.website || "",
+    });
+    setImagePreview(user.image || "");
+  }, [user.id]); // ✅ updates when a different profile is loaded
 
-  const showToastMessage = useCallback(
-    (message: string, variant: "success" | "danger" = "success") => {
-      setToastMessage(message);
-      setToastVariant(variant);
-      setShowToast(true);
-    },
-    []
-  );
+  const showToastMessage = useCallback((message: string, variant: "success" | "danger" = "success") => {
+    setToastMessage(message);
+    setToastVariant(variant);
+    setShowToast(true);
+  }, []);
 
-  const handleChange = useCallback((field: string, value: string) => {
+
+
+
+
+ const handleChange = useCallback((field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   }, []);
 
-  const handleSave = async () => {
-    if (isSaving) return;
 
-    // Rate limiting - prevent multiple rapid requests
+ const handleSave = async () => {
+    if (!isOwnProfile) return;
+
     const now = Date.now();
     if (now - lastApiCallRef.current < 2000) {
       showToastMessage("Please wait before making another request", "danger");
@@ -111,9 +116,7 @@ export default function ProfileCard() {
     }
 
     try {
-      if (!user?.id) {
-        throw new Error("User ID not available");
-      }
+      if (!user.id) throw new Error("User ID not available");
 
       const res = await fetch(`/api/profile/${user.id}`, {
         method: "PATCH",
@@ -126,28 +129,21 @@ export default function ProfileCard() {
         throw new Error(data.error || "Failed to update profile.");
       }
 
-      const data = await res.json();
+      await res.json();
 
-
-      // Update session only once after a successful update
-      if (update) {
-        await update(); // ✅ fetch latest session
-      }
-
+      if (update) await update();
       showToastMessage("Profile updated successfully!");
       setShowEdit(false);
     } catch (err: any) {
       console.error("Error updating profile:", err);
-      showToastMessage(
-        err.message || "Something went wrong. Please try again.",
-        "danger"
-      );
+      showToastMessage(err.message || "Something went wrong.", "danger");
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isOwnProfile) return;
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -218,6 +214,7 @@ export default function ProfileCard() {
   };
 
   const removeImage = async () => {
+    if (!isOwnProfile) return;
     try {
       if (!user?.id) {
         throw new Error("User ID not available");
@@ -234,13 +231,7 @@ export default function ProfileCard() {
       }
 
       // Update session with removed image
-      await update({
-        ...session,
-        user: {
-          ...session?.user,
-        },
-      });
-
+     
       setImagePreview("");
       showToastMessage("Profile image removed successfully!");
     } catch (error: any) {
@@ -255,98 +246,61 @@ export default function ProfileCard() {
     <>
       <Card className="shadow-sm mb-4">
         <Card.Body>
+          {/* Avatar */}
           <div className="d-flex flex-column align-items-center text-center mb-3 position-relative">
             <div className="position-relative">
-              <Image
-                src={user?.image || "/default-avatar.png"}
-                alt="User avatar"
+               <Image
+                src={imagePreview || "/default-avatar.png"}
+                alt={user.name || "User"}
                 width={120}
                 height={120}
                 unoptimized
                 className="rounded-circle"
-                priority
               />
-
-              <Button
-                variant="primary"
-                size="sm"
-                className="position-absolute bottom-0 end-0 rounded-circle p-1"
-                style={{ width: "32px", height: "32px" }}
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-                aria-label="Upload profile picture"
-              >
-                {isUploading ? (
-                  <Spinner animation="border" size="sm" />
-                ) : (
-                  <CloudUpload size={14} />
-                )}
-              </Button>
-              {user?.image && (
-                <Button
-                  variant="danger"
-                  size="sm"
-                  className="position-absolute top-0 end-0 rounded-circle p-1"
-                  style={{ width: "28px", height: "28px" }}
-                  onClick={removeImage}
-                  disabled={isUploading}
-                  aria-label="Remove profile picture"
-                >
-                  <X size={12} />
-                </Button>
+              {isOwnProfile && (
+                <>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="position-absolute bottom-0 end-0 rounded-circle p-1"
+                    style={{ width: "32px", height: "32px" }}
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                  >
+                    {isUploading ? (
+                      <Spinner size="sm" />
+                    ) : (
+                      <CloudUpload size={14} />
+                    )}
+                  </Button>
+                  {user?.image && (
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      className="position-absolute top-0 end-0 rounded-circle p-1"
+                      style={{ width: "28px", height: "28px" }}
+                      onClick={removeImage}
+                      disabled={isUploading}
+                    >
+                      <X size={12} />
+                    </Button>
+                  )}
+                </>
               )}
             </div>
-
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleImageUpload}
-              accept="image/*"
-              style={{ display: "none" }}
-              aria-hidden="true"
-            />
-
-            <h2 className="h5 mt-3 mb-1">{user?.name || "Guest User"}</h2>
-            <p className="text-muted mb-2">
-              @{user?.email?.split("@")[0] || "guest"}
-            </p>
-            {user?.bio && (
-              <p className="text-center fst-italic mb-2">{user.bio}</p>
-            )}
           </div>
 
-          <div className="mb-3">
-            {user?.location && (
-              <div className="d-flex align-items-center mb-1">
-                <span className="me-2">📍</span>
-                <span>{user.location}</span>
-              </div>
-            )}
-            {user?.website && (
-              <div className="d-flex align-items-center">
-                <span className="me-2">🔗</span>
-                <a
-                  href={user.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-decoration-none"
-                >
-                  {user.website}
-                </a>
-              </div>
-            )}
-          </div>
+          <h2 className="h5 mt-3 mb-1">{user?.name || "Guest User"}</h2>
+          <p className="text-muted mb-2">@{user?.email?.split("@")[0] || "guest"}</p>
+          {user?.bio && <p className="text-center fst-italic">{user.bio}</p>}
 
-          <div className="d-flex justify-content-center gap-2">
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setShowEdit(true)}
-              disabled={isSaving}
-            >
-              Edit Profile
-            </Button>
-          </div>
+          {isOwnProfile && (
+            <div className="d-flex justify-content-center gap-2">
+              <Button variant="primary" size="sm" onClick={() => setShowEdit(true)} disabled={isSaving}>
+                Edit Profile
+              </Button>
+            </div>
+          )}
         </Card.Body>
 
         <Modal

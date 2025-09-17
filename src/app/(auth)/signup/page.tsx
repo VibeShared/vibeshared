@@ -247,14 +247,6 @@ export default function SignupPage() {
         return;
       }
 
-
-      console.log("📦 Signup Payload:", {
-  name: formData.name,
-  email: formData.email,
-  password: formData.password,
-   otp: formData.otp.trim(),
-});
-
       // OTP verified successfully, now create account
       const signupRes = await fetch("/api/auth/signup", {
         method: "POST",
@@ -311,6 +303,9 @@ export default function SignupPage() {
       setError("Network error. Please check your connection and try again.");
     }
   };
+
+
+  
 
   return (
     <div className="container py-5">

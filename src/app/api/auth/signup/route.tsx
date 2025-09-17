@@ -46,6 +46,16 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (error: any) {
+    console.error("Error creating user:", error);
+
+    // ✅ Catch duplicate key error (in case unique index triggers)
+    if (error.code === 11000 && error.keyPattern?.name) {
+      return NextResponse.json(
+        { error: "This name is already taken. Please choose another." },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
       { error: error.message || "Something went wrong" },
       { status: 500 }
