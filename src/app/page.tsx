@@ -204,7 +204,7 @@ export default function HomeFeed() {
           </div>
 
           {!hasMore && (
-            <p className="text-center text-muted">You've reached the end 🎉</p>
+            <p className="text-center text-muted">yes You've reached the end 🎉</p>
           )}
         </div>
       </div>
