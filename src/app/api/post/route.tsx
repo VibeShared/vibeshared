@@ -1,13 +1,14 @@
 // app/api/post/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/Connect';
-import Post from "@/lib/models/Post";
+import Post, {IPost} from "@/lib/models/Post";
 import { v2 as cloudinary } from 'cloudinary';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { z } from 'zod';
-import { Like } from '@/lib/models/Likes';
-import { Comment } from '@/lib/models/Comment';
+import { Like, ILike } from '@/lib/models/Likes';
+import { Comment, IComment } from '@/lib/models/Comment';
+import mongoose from 'mongoose';
 
 
 // Configure Cloudinary
@@ -87,46 +88,86 @@ export async function GET(req: NextRequest) {
     await connectDB();
 
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
+    const page = Math.max(1, Number(searchParams.get("page")) || 1);
+    const limit = Math.min(50, Math.max(1, Number(searchParams.get("limit")) || 10));
     const skip = (page - 1) * limit;
 
-    const totalPosts = await Post.countDocuments();
+    const userId = searchParams.get("userId");
+    const query: Record<string, any> = {};
+    
+    if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+      query.userId = new mongoose.Types.ObjectId(userId);
+    }
 
-    // Fetch posts
-    const posts = await Post.find({})
+    const totalPosts = await Post.countDocuments(query);
+
+    const posts = await Post.find(query)
       .populate("userId", "name image email")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .lean();
 
-    // ✅ Add likesCount and comments to each post
-    const postsWithExtras = await Promise.all(
-      posts.map(async (post) => {
-        const [likes, comments] = await Promise.all([
-          Like.countDocuments({ postId: post._id }),
-          Comment.find({ postId: post._id }).lean()
-        ]);
+    if (!posts.length) {
+      return NextResponse.json({
+        posts: [],
+        total: totalPosts,
+        hasMore: false,
+        page,
+        limit,
+      });
+    }
 
-        return {
-          ...post,
-          likesCount: likes,
-          comments,
-        };
-      })
-    );
+    const postIds = posts.map((p) => p._id);
+
+    // Bulk fetch likes & comments
+    const [likesData, commentsData] = await Promise.all([
+      Like.aggregate([
+        { $match: { postId: { $in: postIds } } },
+        { $group: { _id: "$postId", count: { $sum: 1 } } },
+      ]),
+      Comment.find({ postId: { $in: postIds } })
+        .populate("userId", "name image")
+        .lean(),
+    ]);
+
+    const likesMap: Record<string, number> = {};
+    likesData.forEach((like) => {
+      likesMap[like._id.toString()] = like.count;
+    });
+
+    const commentsMap: Record<string, any[]> = {};
+    commentsData.forEach((comment) => {
+      const postId = comment.postId.toString();
+      if (!commentsMap[postId]) {
+        commentsMap[postId] = [];
+      }
+      commentsMap[postId].push(comment);
+    });
+
+   const postsWithExtras = posts.map((post) => ({
+  ...post,
+  _id: (post._id as mongoose.Types.ObjectId).toString(),
+  likesCount: likesMap[(post._id as mongoose.Types.ObjectId).toString()] || 0,
+  comments: commentsMap[(post._id as mongoose.Types.ObjectId).toString()] || [],
+}));
 
     return NextResponse.json({
-      posts: postsWithExtras,
+      page,
+      limit,
       total: totalPosts,
       hasMore: skip + posts.length < totalPosts,
+      posts: postsWithExtras,
     });
   } catch (error) {
     console.error("Error fetching posts:", error);
-    return NextResponse.json({ error: "Failed to fetch posts" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch posts" }, 
+      { status: 500 }
+    );
   }
 }
+
 
 
 export async function DELETE(

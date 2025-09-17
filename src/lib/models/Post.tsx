@@ -9,6 +9,7 @@ export interface IUser {
 }
 
 export interface IPost extends Document {
+   _id: mongoose.Types.ObjectId;
   userId: Types.ObjectId | IUser;
   content: string;
    cloudinary_id?: string; 
