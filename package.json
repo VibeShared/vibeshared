@@ -42,5 +42,9 @@
     "@types/react-dom": "^19",
     "@types/warning": "^3.0.3",
     "typescript": "^5"
+  },
+  
+  "overrides": {
+    "debug": "4.3.4"
   }
 }
