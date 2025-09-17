@@ -16,7 +16,6 @@
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.1",
     "cloudinary": "^2.7.0",
-    "git": "^0.1.5",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.540.0",
     "mongodb": "^6.18.0",
@@ -43,7 +42,6 @@
     "@types/warning": "^3.0.3",
     "typescript": "^5"
   },
-  
   "overrides": {
     "debug": "4.3.4"
   }
