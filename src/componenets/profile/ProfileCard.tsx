@@ -1,7 +1,7 @@
 //src\componenets\profile\ProfileCard.tsx
 import ProfileCardClient from "@/componenets/ProfileCard/ProfilePersonal";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/authoptions";
 
 interface ProfileCardServerProps {
   profile: any;

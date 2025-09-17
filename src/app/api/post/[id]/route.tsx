@@ -40,9 +40,10 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// ✅ Correct DELETE signature for App Router
 export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } }
+ req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -51,14 +52,14 @@ export async function DELETE(
     }
 
     await connectDB();
-    const { id } = params;
+   const { id } = await params; 
 
     const post = await Post.findById(id);
     if (!post) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
-    // ✅ Check if user is the owner before deleting
+    // ✅ Check ownership
     if (post.userId.toString() !== session.user.id) {
       return NextResponse.json(
         { error: "You are not authorized to delete this post" },
@@ -66,25 +67,20 @@ export async function DELETE(
       );
     }
 
-    // ✅ Delete media from Cloudinary first (if exists)
+    // ✅ Delete media from Cloudinary
     if (post.cloudinary_id) {
       try {
         await cloudinary.uploader.destroy(post.cloudinary_id);
       } catch (cloudError) {
         console.error("Cloudinary delete error:", cloudError);
-        // We can still continue to delete from DB to avoid stale records
       }
     }
 
-    // ✅ Delete from MongoDB
     await Post.findByIdAndDelete(id);
 
     return NextResponse.json({ message: "Post deleted successfully" });
   } catch (error) {
     console.error("Error deleting post:", error);
-    return NextResponse.json(
-      { error: "Failed to delete post" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete post" }, { status: 500 });
   }
 }

@@ -8,9 +8,9 @@ import { Like } from "@/lib/models/Likes";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params;
+  const { id } = await params; // ✅ must await
 
   try {
     await connectDB();
@@ -60,9 +60,9 @@ export async function GET(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params;
+  const { id } = await params; // ✅ must await
 
   try {
     await connectDB();
@@ -88,4 +88,3 @@ export async function DELETE(
     );
   }
 }
-

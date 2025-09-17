@@ -3,31 +3,31 @@
 import LikeButton from "@/componenets/Other/LikeButton";
 import CommentSection from "@/componenets/Other/CommentSection";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/authoptions";
 import "@/styles/componenet/profile/post/post.module.css";
 import DeletePostButton from "@/componenets/Other/DeletePostButton";
+import { Post } from "@/types/types";
+import { Metadata } from "next";
+import Image from "next/image";
 
-interface Comment {
-  _id: string;
-  text: string;
-  userId: { name: string; image?: string };
-}
-
-interface Post {
-  _id: string;
-  content: string;
-  mediaUrl?: string;
-  userId: { name: string; image?: string };
-  likesCount: number;
-  comments: Comment[];
+// ✅ Optional: Generate SEO metadata dynamically
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  
+  return {
+    title: `Post by user ${id}`,
+    description: `View the latest posts from user ${id}`,
+  };
 }
 
 async function getPostsByUser(userId: string) {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_BASE_URL}/api/post/user/${userId}`,
-    {
-      cache: "no-store",
-    }
+    { cache: "no-store" }
   );
 
   if (!res.ok) {
@@ -41,11 +41,13 @@ async function getPostsByUser(userId: string) {
 export default async function UserPostsPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  // ✅ Await the params Promise
+  const { id } = await params;
   const session = await getServerSession(authOptions);
-  const data = await getPostsByUser(params.id);
-  const currentUserId = session.user.id;
+  const data = await getPostsByUser(id);
+  const currentUserId = session?.user?.id ?? "";
 
   if (!data || !data.posts || data.posts.length === 0) {
     return (
@@ -64,7 +66,7 @@ export default async function UserPostsPage({
     <div className="container py-4">
       <div className="row justify-content-center">
         <div className="col-12 col-md-10 col-lg-8">
-          {data.posts.map((post: any) => (
+          {data.posts.map((post: Post) => (
             <div
               key={post._id}
               className="card p-3 mb-4 shadow-sm border-0 rounded-4"
@@ -72,11 +74,12 @@ export default async function UserPostsPage({
               {/* Post Header */}
               <div className="d-flex align-items-center mb-3">
                 <div className="position-relative">
-                  <img
-                    src={post.userId?.image || "/default-avatar.png"}
+                  <Image
+                    src={post.userId?.image || "/avatar.png"}
                     alt={post.userId?.name || "Unknown"}
                     width={48}
                     height={48}
+                    unoptimized
                     className="rounded-circle object-fit-cover border border-2 border-white shadow-sm"
                   />
                   <span className="position-absolute bottom-0 end-0 bg-success rounded-circle p-1 border border-2 border-white"></span>
@@ -102,11 +105,13 @@ export default async function UserPostsPage({
 
               {/* Media */}
               {post.mediaUrl && (
-                <div className="mb-3 rounded-3 overflow-hidden">
-                  <img
+                <div className="mb-3 rounded-3 overflow-hidden position-relative" style={{ height: '400px' }}>
+                  <Image
                     src={post.mediaUrl}
                     alt="Post media"
-                    className="img-fluid w-100 rounded-3"
+                    fill
+                    className="rounded-3 object-fit-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   />
                 </div>
               )}
@@ -138,14 +143,14 @@ export default async function UserPostsPage({
               <CommentSection
                 postId={post._id}
                 initialComments={post.comments ?? []}
-                currentUserId={session?.user?.id ?? ""}
+                currentUserId={currentUserId}
               />
             </div>
           ))}
         </div>
       </div>
 
-      {/* Add Bootstrap Icons CDN */}
+      {/* Bootstrap Icons */}
       <link
         rel="stylesheet"
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css"

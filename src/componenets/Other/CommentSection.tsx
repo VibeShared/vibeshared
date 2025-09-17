@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { PopulatedComment, Post } from "../../../types/types";
+import type { PopulatedComment, Post } from "@/types/types";
 import { useEffect } from "react";
 
 interface User {

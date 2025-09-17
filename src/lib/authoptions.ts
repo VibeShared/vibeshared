@@ -1,15 +1,13 @@
-// src/lib/authOptions.ts
-import { type NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import FacebookProvider from "next-auth/providers/facebook";
 import TwitterProvider from "next-auth/providers/twitter";
 import bcrypt from "bcryptjs";
-import mongoose from "mongoose";
-import connectdb from "@/lib/Connect";
+import { connectDB } from "@/lib/Connect";
 import User from "@/lib/models/User";
+import { SessionStrategy } from "next-auth";
 
-export const authOptions: NextAuthOptions = {
+export const authOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -18,27 +16,21 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        await mongoose.connect(connectdb);
-
+        await connectDB();
         const user = await User.findOne({ email: credentials?.email });
         if (!user) return null;
 
-        const isPasswordValid = await bcrypt.compare(
-          credentials!.password,
-          user.password
-        );
-        if (!isPasswordValid) return null;
+        const valid = await bcrypt.compare(credentials!.password, user.password);
+        if (!valid) return null;
 
         return {
           id: user._id.toString(),
-          name: user.name,
           email: user.email,
+          name: user.name,
           image: user.image,
         };
       },
     }),
-
-    // you can also keep Google/Facebook/Twitter
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
@@ -54,23 +46,66 @@ export const authOptions: NextAuthOptions = {
   ],
 
   callbacks: {
-    async jwt({ token, user }) {
+    async signIn({ user, account }: any) {
+      if (account?.provider !== "credentials") {
+        await connectDB();
+        const existingUser = await User.findOne({ email: user.email });
+
+        if (!existingUser) {
+          const newUser = await User.create({
+            name: user.name || "Unnamed",
+            email: user.email,
+            image: user.image,
+            password: "",
+          });
+          user.id = newUser._id.toString();
+        } else {
+          user.id = existingUser._id.toString();
+        }
+      }
+      return true;
+    },
+
+    async jwt({ token, user, trigger }: { token: any; user?: any; trigger?: string }) {
       if (user) {
         token.id = user.id;
+        token.name = user.name;
+        token.email = user.email;
+        token.picture = user.image;
+        token.bio = user.bio ?? "";
+        token.location = user.location ?? "";
+        token.website = user.website ?? "";
       }
+
+      if (trigger === "update") {
+        await connectDB();
+        const freshUser = await User.findById(token.id);
+        if (freshUser) {
+          token.name = freshUser.name;
+          token.picture = freshUser.image;
+          token.bio = freshUser.bio ?? "";
+          token.location = freshUser.location ?? "";
+          token.website = freshUser.website ?? "";
+        }
+      }
+
       return token;
     },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-      }
+
+    async session({ session, token }: { session: any; token: any }) {
+      session.user = {
+        id: token.id,
+        name: token.name,
+        email: token.email,
+        image: token.picture,
+        bio: token.bio,
+        location: token.location,
+        website: token.website,
+      };
       return session;
     },
   },
 
-  session: {
-    strategy: "jwt", // cookies + jwt
-  },
-
-  secret: process.env.AUTH_SECRET!,
+  session: { strategy: "jwt" as SessionStrategy },
+  secret: process.env.AUTH_SECRET,
 };

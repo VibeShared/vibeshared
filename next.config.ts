@@ -18,6 +18,11 @@ const nextConfig: NextConfig = {
       protocol: "https",
       hostname: "cdn-icons-png.flaticon.com",
     },
+     {
+        protocol: 'http',
+        hostname: 'localhost', // Allows localhost for development
+        port: '3000',
+      },
   ],
 }
 };

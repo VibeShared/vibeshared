@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/authoptions";
 import {connectDB} from "@/lib/Connect";
 import User from "@/lib/models/User";
 import cloudinary from "@/lib/cloudinary";

@@ -4,7 +4,7 @@ import { connectDB } from '@/lib/Connect';
 import Post, {IPost} from "@/lib/models/Post";
 import { v2 as cloudinary } from 'cloudinary';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/authoptions';
 import { z } from 'zod';
 import { Like, ILike } from '@/lib/models/Likes';
 import { Comment, IComment } from '@/lib/models/Comment';
@@ -169,35 +169,5 @@ export async function GET(req: NextRequest) {
 }
 
 
-
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    await connectDB();
-    const { id } = params;
-
-    const post = await Post.findById(id);
-    if (!post) {
-      return NextResponse.json({ error: "Post not found" }, { status: 404 });
-    }
-
-    // ✅ Delete Cloudinary media if exists
-    if (post.cloudinary_id) {
-      await cloudinary.uploader.destroy(post.cloudinary_id);
-    }
-
-    await Post.findByIdAndDelete(id);
-
-    return NextResponse.json({ message: "Post deleted successfully" });
-  } catch (error) {
-    console.error("Error deleting post:", error);
-    return NextResponse.json(
-      { error: "Failed to delete post" },
-      { status: 500 }
-    );
-  }
-}
 
 
