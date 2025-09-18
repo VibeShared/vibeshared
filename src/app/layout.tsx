@@ -26,13 +26,12 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://vibeshared.com/"), // ✅ Use your production URL
+  metadataBase: new URL("https://vibeshared.com/"),
   title: {
     default: "Vibe Shared",
     template: "%s | Vibe Shared",
   },
-  description:
-    "Discover the latest Bollywood & Kollywood movies, posters, and updates.",
+  description: "Discover the latest Bollywood & Kollywood movies, posters, and updates.",
   openGraph: {
     title: "Vibe Shared",
     description: "Discover the latest Movies, posters, and updates.",
@@ -58,25 +57,24 @@ export const metadata: Metadata = {
   manifest: "/site.webmanifest",
 };
 
-  const session = await getServerSession(authOptions);
-
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // ✅ Now it’s inside request scope
+  const session = await getServerSession(authOptions);
+
   return (
     <html lang="en" className={`${inter.variable} ${poppins.variable}`}>
       <body className="font-sans">
         <BootstrapClient />
 
-        {/* ✅ Toast container must be at root */}
         <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
 
-        {/* ✅ Show global messages */}
         <GlobalMessages />
 
-        <SessionProvider  session={session}>
+        <SessionProvider session={session}>
           <Header />
           <Container>{children}</Container>
         </SessionProvider>

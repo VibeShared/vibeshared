@@ -42,9 +42,6 @@ const ProfileSchema: Schema<IProfile> = new Schema(
   }
 );
 
-// Index for better query performance
-ProfileSchema.index({ userId: 1 });
-ProfileSchema.index({ username: 1 });
 
 // Pre-save middleware to ensure consistency
 ProfileSchema.pre('save', function(next) {
