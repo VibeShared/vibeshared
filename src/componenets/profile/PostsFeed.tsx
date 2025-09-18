@@ -61,7 +61,8 @@ export default function ProfilePage({userId}: PostsFeedProps) {
               <Row>
                 {photos.map((photo, index) => (
                   <Col
-                    xs={4}
+                    xs={6}
+                    sm={4}
                     className="mb-3 "
                     key={`${photo.postId}-${index}`} // ✅ unique key (postId + index)
                   >

@@ -1,5 +1,5 @@
 
-        .like-btn {
+        .likeBtn {
           display: inline-flex;
           align-items: center;
           justify-content: center;
@@ -15,24 +15,24 @@
           font-weight: 500;
         }
         
-        .like-btn:hover:not(:disabled) {
+        .likeBtn:hover:not(:disabled) {
           background-color: rgba(237, 73, 86, 0.1);
           border-color: rgba(237, 73, 86, 0.3);
           color: #ED4956;
         }
         
-        .like-btn.liked {
+        .likeBtn.liked {
           background-color: rgba(237, 73, 86, 0.1);
           border-color: rgba(237, 73, 86, 0.3);
           color: #ED4956;
         }
         
-        .like-btn:disabled {
+        .likeBtn:disabled {
           opacity: 0.7;
           cursor: not-allowed;
         }
         
-        .like-btn-content {
+        .likeBtn-content {
           display: flex;
           align-items: center;
           gap: 8px;
@@ -40,7 +40,7 @@
           z-index: 2;
         }
         
-        .heart-container {
+        .heartContainer {
           position: relative;
           width: 20px;
           height: 20px;
@@ -49,23 +49,23 @@
           justify-content: center;
         }
         
-        .heart-container i {
+        .heartContainer i {
           font-size: 18px;
           transition: transform 0.3s ease;
         }
         
-        .like-btn.liked .heart-container i {
+        .likeBtn.liked .heartContainer i {
           animation: heartBeat 0.5s ease;
         }
         
-        .like-count {
+        .likeCount {
           font-size: 14px;
           font-weight: 600;
           min-width: 12px;
           text-align: center;
         }
         
-        .heart-burst-animation {
+        .heartBurstAnimation {
           position: absolute;
           top: 50%;
           left: 50%;
@@ -74,13 +74,13 @@
           animation: burst 0.6s ease-out forwards;
         }
         
-        .heart-burst-animation i {
+        .heartBurstAnimation i {
           color: #ED4956;
           font-size: 24px;
           opacity: 0;
         }
         
-        .particle-animation {
+        .particleAnimation {
           position: absolute;
           top: 50%;
           left: 50%;
@@ -144,16 +144,48 @@
         
         /* Mobile responsiveness */
         @media (max-width: 576px) {
-          .like-btn {
+          .likeBtn {
             padding: 6px 12px;
           }
           
-          .heart-container i {
+          .heartContainer i {
             font-size: 16px;
           }
           
-          .like-count {
+          .likeCount {
             font-size: 13px;
           }
         }
    
+        .loadingOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loadingOverlay::after {
+  content: "";
+  width: 16px;
+  height: 16px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #dbdbdb;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.liking {
+  opacity: 0.7;
+  cursor: not-allowed;
+}

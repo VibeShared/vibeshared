@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import '@/styles/componenet/LikeButton.module.css'
+import style from "@/styles/componenet/LikeButton.module.css";
 
 interface LikeButtonProps {
   postId: string;
@@ -34,14 +34,10 @@ export default function LikeButton({
 
       const data = await res.json();
       const wasUnliked = data.message === "Post unliked";
-      
-      setCount((prev) => {
-  if (wasUnliked) return Math.max(prev - 1, 0); // ✅ never below 0
-  return prev + 1;
-});
+
+      setCount((prev) => (wasUnliked ? Math.max(prev - 1, 0) : prev + 1));
       setIsLiked(!wasUnliked);
-      
-      // Show animation only when liking, not unliking
+
       if (!wasUnliked) {
         setShowAnimation(true);
         setTimeout(() => setShowAnimation(false), 600);
@@ -56,40 +52,42 @@ export default function LikeButton({
   return (
     <div className="position-relative">
       <button
-        className={`like-btn ${isLiked ? 'liked' : ''} ${isLiking ? 'liking' : ''}`}
+        className={`${style.likeBtn} ${isLiked ? style.liked : ""} ${
+          isLiking ? style.liking : ""
+        }`}
         onClick={handleLike}
         disabled={isLiking}
         aria-label={isLiked ? "Unlike this post" : "Like this post"}
       >
-        <div className="like-btn-content">
-          <div className="heart-container">
-            <i className={`bi ${isLiked ? 'bi-heart-fill' : 'bi-heart'}`}></i>
+        <div className={style.likeBtnContent}>
+          <div className={style.heartContainer}>
+            <i className={`bi ${isLiked ? "bi-heart-fill" : "bi-heart"}`}></i>
           </div>
-          <span className="like-count">{count}</span>
+          <span className={style.likeCount}>{count}</span>
         </div>
       </button>
-      
-      {/* Animation elements */}
+
       {showAnimation && (
         <>
-          <div className="heart-burst-animation">
+          <div className={style.heartBurstAnimation}>
             <i className="bi bi-heart-fill"></i>
           </div>
-          <div className="particle-animation">
+          <div className={style.particleAnimation}>
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="particle" style={{
-                '--angle': `${i * 60}deg`,
-                '--delay': `${i * 0.1}s`
-              } as React.CSSProperties}></div>
+              <div
+                key={i}
+                className={style.particle}
+                style={
+                  {
+                    "--angle": `${i * 60}deg`,
+                    "--delay": `${i * 0.1}s`,
+                  } as React.CSSProperties
+                }
+              ></div>
             ))}
           </div>
         </>
       )}
-      
-     
-      
-      {/* Add Bootstrap Icons CDN */}
-      
     </div>
   );
 }

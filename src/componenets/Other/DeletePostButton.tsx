@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 
-export default function DeletePostButton({ postId, currentUserId, postOwnerId }: {
+export default function DeletePostButton({ postId, currentUserId, postOwnerId, onDelete }: {
   postId: string;
   currentUserId: string;
   postOwnerId: string;
+  onDelete?: (postId: string) => void;
 }) {
   const [loading, setLoading] = useState(false);
 
