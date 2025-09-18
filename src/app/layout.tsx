@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import SessionProvider from "@/componenets/hooks/SessionWrapper";
 import "bootstrap/dist/css/bootstrap.min.css";
+import "bootstrap-icons/font/bootstrap-icons.css";
 import Header from "@/componenets/Home/Header";
 import BootstrapClient from "@/componenets/hooks/BootstrapClient";
 import Container from "@/componenets/Other/Container";

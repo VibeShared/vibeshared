@@ -403,7 +403,7 @@ export default function CreatePost({
             {isUploading ? (
               <>
                 <Spinner animation="border" size="sm" className="me-2" />
-                Posting...
+                Sending Vibes...
               </>
             ) : (
               "Post"

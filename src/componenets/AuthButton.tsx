@@ -24,7 +24,6 @@ export default function AuthButton() {
   }, []);
 
   // ✅ Refresh session whenever this component mounts
- 
 
   // ✅ If not signed in
   if (!session) {
@@ -46,17 +45,16 @@ export default function AuthButton() {
         onClick={() => setOpen(!open)}
       >
         {/* User Avatar */}
-        {session.user?.image && (
-          <Image
-            key={session.user.image || "https://res.cloudinary.com/dlcrwtyd3/image/upload/v1757470463/3135715_niwuv2.png"} // force re-render on change
-            src={session.user.image}
-            alt={session.user.name || "User"}
-            width={36}
-            height={36}
-            className={`${styles.authAvatar} rounded-circle`}
-            unoptimized // optional if using external domains
-          />
-        )}
+        <Image
+          src={
+            session.user?.image ||
+            "https://res.cloudinary.com/dlcrwtyd3/image/upload/v1757470463/3135715_niwuv2.png"
+          }
+          alt={session.user?.name || "User"}
+          width={36}
+          height={36}
+          className={`${styles.authAvatar} rounded-circle`}
+        />
 
         <span className={`${styles.authName} ms-2 d-none d-sm-inline`}>
           {session.user?.name?.split(" ")[0]}
@@ -97,7 +95,7 @@ export default function AuthButton() {
               await signOut({ redirect: false }); // optional: prevent redirect
               setOpen(false);
 
-               router.push("/home?success=logout");
+              router.push("/home?success=logout");
             }}
             className="dropdown-item d-flex align-items-center py-2 text-danger"
           >

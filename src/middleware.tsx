@@ -3,8 +3,10 @@ import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 export async function middleware(req: NextRequest) {
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const token = await getToken({ req, secret: process.env.AUTH_SECRET });
   const { pathname, searchParams } = req.nextUrl;
+
+
 
   // Helper to redirect with a message
   const redirectWithMessage = (url: string, message: string) => {

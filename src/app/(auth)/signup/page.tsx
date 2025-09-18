@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { z } from "zod";
 import  Link  from "next/link";
 
+
+
 const signupSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email address"),
