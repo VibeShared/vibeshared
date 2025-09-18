@@ -1,4 +1,3 @@
-// app/layout.tsx
 import "./globals.css";
 import type { Metadata } from "next";
 import SessionProvider from "@/componenets/hooks/SessionWrapper";
@@ -7,9 +6,11 @@ import Header from "@/componenets/Home/Header";
 import BootstrapClient from "@/componenets/hooks/BootstrapClient";
 import Container from "@/componenets/Other/Container";
 import { Inter, Poppins } from "next/font/google";
-
-import { Analytics } from "@vercel/analytics/next"
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" />
+import GlobalMessages from "@/componenets/GlobalMessage";
+import { Analytics } from "@vercel/analytics/next";
+import { Toaster } from "react-hot-toast";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/authoptions";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -25,12 +26,13 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-   metadataBase: new URL("http://localhost:3000/"),
+  metadataBase: new URL("https://vibeshared.com/"), // ✅ Use your production URL
   title: {
     default: "Vibe Shared",
-    template: "%s | Vibe Shared", // Page titles will use this pattern
+    template: "%s | Vibe Shared",
   },
-  description: "Discover the latest Bollywood & Kollywood movies, posters, and updates.",
+  description:
+    "Discover the latest Bollywood & Kollywood movies, posters, and updates.",
   openGraph: {
     title: "Vibe Shared",
     description: "Discover the latest Movies, posters, and updates.",
@@ -38,7 +40,7 @@ export const metadata: Metadata = {
     siteName: "Vibe Shared",
     images: [
       {
-        url: "/icons/icon-512x512.png", // Replace with your logo/poster
+        url: "/icons/icon-512x512.png",
         width: 512,
         height: 512,
         alt: "Vibe Shared",
@@ -56,7 +58,9 @@ export const metadata: Metadata = {
   manifest: "/site.webmanifest",
 };
 
-export default async function RootLayout({
+  const session = await getServerSession(authOptions);
+
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -65,15 +69,18 @@ export default async function RootLayout({
     <html lang="en" className={`${inter.variable} ${poppins.variable}`}>
       <body className="font-sans">
         <BootstrapClient />
-        <Container>
-          <SessionProvider>
-           
-            <Header />
-            {children}
-           
-          </SessionProvider>
-        
-        </Container>
+
+        {/* ✅ Toast container must be at root */}
+        <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
+
+        {/* ✅ Show global messages */}
+        <GlobalMessages />
+
+        <SessionProvider  session={session}>
+          <Header />
+          <Container>{children}</Container>
+        </SessionProvider>
+
         <Analytics />
       </body>
     </html>

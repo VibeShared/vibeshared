@@ -60,7 +60,7 @@ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     }
 
     // ✅ Successful login → redirect home
-    router.push("/");
+    router.push("/?success=login");
     router.refresh(); // update auth state
   }
 

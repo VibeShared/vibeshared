@@ -137,8 +137,8 @@ export default function HomeFeed() {
                   className="d-flex align-items-center text-decoration-none"
                 >
                   <img
-                    src={post.userId?.image || "/default-avatar.png"}
-                    alt={post.userId?.name || "Unknown"}
+                    src={post.userId?.image || "https://res.cloudinary.com/dlcrwtyd3/image/upload/v1757470463/3135715_niwuv2.png"}
+                    alt={post.userId?.name || "Guest User"}
                     width={48}
                     height={48}
                     className="rounded-circle object-fit-cover border border-2 border-white shadow-sm"

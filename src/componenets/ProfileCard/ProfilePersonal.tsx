@@ -250,7 +250,7 @@ export default function ProfileCard({
           <div className="d-flex flex-column align-items-center text-center mb-3 position-relative">
             <div className="position-relative">
                <Image
-                src={imagePreview || "/default-avatar.png"}
+                src={imagePreview || "https://res.cloudinary.com/dlcrwtyd3/image/upload/v1757470463/3135715_niwuv2.png"}
                 alt={user.name || "User"}
                 width={120}
                 height={120}

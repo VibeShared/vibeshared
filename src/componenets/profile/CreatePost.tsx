@@ -202,7 +202,7 @@ export default function CreatePost({
                 width: "50px",
                 height: "50px",
                 backgroundImage: `url(${
-                  session?.user?.image || "/avatar.png"
+                  session?.user?.image || "https://res.cloudinary.com/dlcrwtyd3/image/upload/v1757470463/3135715_niwuv2.png"
                 })`,
                 backgroundSize: "cover",
                 backgroundPosition: "center",

@@ -48,7 +48,7 @@ export default function AuthButton() {
         {/* User Avatar */}
         {session.user?.image && (
           <Image
-            key={session.user.image} // force re-render on change
+            key={session.user.image || "https://res.cloudinary.com/dlcrwtyd3/image/upload/v1757470463/3135715_niwuv2.png"} // force re-render on change
             src={session.user.image}
             alt={session.user.name || "User"}
             width={36}
@@ -96,6 +96,8 @@ export default function AuthButton() {
             onClick={async () => {
               await signOut({ redirect: false }); // optional: prevent redirect
               setOpen(false);
+
+               router.push("/home?success=logout");
             }}
             className="dropdown-item d-flex align-items-center py-2 text-danger"
           >
