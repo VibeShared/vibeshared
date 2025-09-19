@@ -5,7 +5,7 @@ import { IPost } from "./Post";
 export interface IComment extends Document {
   userId: IUser["_id"];
   postId: IPost["_id"];
-  parentId?: IComment["_id"] | null; // NEW: for replies
+  parentId?: IComment["_id"] | null; 
   text: string;
   createdAt: Date;
   updatedAt: Date;
