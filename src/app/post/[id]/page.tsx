@@ -142,7 +142,7 @@ export default async function UserPostsPage({
               {/* Comment Section */}
               <CommentSection
                 postId={post._id}
-                initialComments={post.comments ?? []}
+                
                 currentUserId={currentUserId}
               />
             </div>

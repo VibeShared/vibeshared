@@ -1,14 +1,18 @@
+// app/api/comments/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import  {connectDB}  from "@/lib/Connect";
-import { Comment, IComment } from "@/lib/models/Comment";
+import { connectDB } from "@/lib/Connect";
+import { Comment } from "@/lib/models/Comment";
 import mongoose, { Types } from "mongoose";
+import { pusherServer } from "@/lib/pusher";
 
-// Type definitions
+// Interfaces
 interface CreateCommentRequest {
   userId: string;
   postId: string;
   text: string;
+   parentId?: string; // ✅ allow replies
 }
+
 
 interface DeleteCommentRequest {
   commentId: string;
@@ -21,21 +25,24 @@ interface PopulatedUser {
   image?: string;
 }
 
-interface PopulatedComment extends Omit<IComment, 'userId'> {
+interface PopulatedComment {
+  _id: string;
+  text: string;
   userId: PopulatedUser;
+  createdAt: Date;
 }
 
-interface ErrorResponse {
-  error: string;
+interface DeleteCommentPayload {
+  commentId: string;
 }
 
 // POST - Create a new comment
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
-    
+
     const body: CreateCommentRequest = await request.json();
-    const { userId, postId, text } = body;
+    const { userId, postId, text, parentId } = body;
 
     if (!userId || !postId || !text) {
       return NextResponse.json(
@@ -45,49 +52,45 @@ export async function POST(request: NextRequest) {
     }
 
     if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(postId)) {
-      return NextResponse.json(
-        { error: "Invalid userId or postId format" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid userId or postId format" }, { status: 400 });
     }
 
-    if (typeof text !== 'string' || text.trim().length === 0) {
-      return NextResponse.json(
-        { error: "Comment text cannot be empty" },
-        { status: 400 }
-      );
+    if (text.trim().length === 0) {
+      return NextResponse.json({ error: "Comment text cannot be empty" }, { status: 400 });
     }
 
     if (text.length > 1000) {
-      return NextResponse.json(
-        { error: "Comment cannot exceed 1000 characters" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Comment cannot exceed 1000 characters" }, { status: 400 });
     }
 
-    const comment = await Comment.create({ 
-      userId: new Types.ObjectId(userId), 
-      postId: new Types.ObjectId(postId), 
-      text: text.trim() 
-    });
-    
-    // Populate the newly created comment to return user data
+    // Create comment
+    const comment = await Comment.create({
+  userId: new Types.ObjectId(userId),
+  postId: new Types.ObjectId(postId),
+  text: text.trim(),
+  parentId: parentId ? new Types.ObjectId(parentId) : null, // ✅
+});
+
+    // Populate user
     const populatedComment = await Comment.findById(comment._id)
       .populate<{ userId: PopulatedUser }>("userId", "name image")
-      .exec();
+      .lean();
+
+    if (populatedComment) {
+      // 🔥 Trigger Pusher event for real-time update
+      await pusherServer.trigger(`comments-${postId}`, "new-comment", {
+        comment: populatedComment,
+      });
+    }
 
     return NextResponse.json(populatedComment, { status: 201 });
-
   } catch (error) {
     console.error("Create Comment error:", error);
-    return NextResponse.json(
-      { error: "Failed to create comment" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create comment" }, { status: 500 });
   }
 }
 
-// GET - Fetch comments for a post
+// GET - Fetch comments with replies
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
@@ -101,75 +104,79 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Post ID is required" }, { status: 400 });
     }
 
-    const skip = (page - 1) * limit;
+    // Fetch all comments for the post
+    const allComments = await Comment.find({ postId: new Types.ObjectId(postId) })
+      .populate("userId", "name image")
+      .sort({ createdAt: -1 })
+      .lean();
 
-    const comments = await Comment.find({ postId: new Types.ObjectId(postId) })
-  .populate("userId", "name image")
-  .sort({ createdAt: -1 })
-  .skip(skip)
-  .limit(limit)
-  .lean();
-
-    const total = await Comment.countDocuments({ postId });
-
-    return NextResponse.json({
-      comments,
-      total,
-      page,
-      hasMore: skip + comments.length < total,
+    // Build nested structure
+    const map = new Map<string, any>();
+    allComments.forEach((c) => {
+      map.set(c._id.toString(), { ...c, replies: [] });
     });
 
+    const rootComments: any[] = [];
+    allComments.forEach((c) => {
+      if (c.parentId) {
+        const parent = map.get(c.parentId.toString());
+        if (parent) parent.replies.push(map.get(c._id.toString()));
+      } else {
+        rootComments.push(map.get(c._id.toString()));
+      }
+    });
+
+    // Paginate root comments only
+    const start = (page - 1) * limit;
+    const paginated = rootComments.slice(start, start + limit);
+
+    return NextResponse.json({
+      comments: paginated,
+      total: rootComments.length,
+      page,
+      hasMore: start + paginated.length < rootComments.length,
+    });
   } catch (error) {
     console.error("Fetch Comments error:", error);
     return NextResponse.json({ error: "Failed to fetch comments" }, { status: 500 });
   }
 }
 
+
 // DELETE - Delete a comment
 export async function DELETE(request: NextRequest) {
   try {
     await connectDB();
-    
+
     const body: DeleteCommentRequest = await request.json();
     const { commentId, userId } = body;
 
     if (!commentId || !userId) {
-      return NextResponse.json(
-        { error: "commentId and userId are required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "commentId and userId are required" }, { status: 400 });
     }
 
     if (!Types.ObjectId.isValid(commentId) || !Types.ObjectId.isValid(userId)) {
-      return NextResponse.json(
-        { error: "Invalid commentId or userId format" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid commentId or userId format" }, { status: 400 });
     }
 
     const comment = await Comment.findById(commentId);
     if (!comment) {
-      return NextResponse.json(
-        { error: "Comment not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Comment not found" }, { status: 404 });
     }
 
     if ((comment.userId as Types.ObjectId).toString() !== userId) {
-      return NextResponse.json(
-        { error: "Not authorized to delete this comment" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Not authorized to delete this comment" }, { status: 403 });
     }
 
     await Comment.deleteOne({ _id: commentId });
-    return NextResponse.json({ message: "Comment deleted successfully" });
 
+    // 🔥 Trigger Pusher event for real-time delete
+    const payload: DeleteCommentPayload = { commentId };
+    await pusherServer.trigger(`comments-${comment.postId}`, "delete-comment", payload);
+
+    return NextResponse.json({ message: "Comment deleted successfully" });
   } catch (error) {
     console.error("Delete Comment error:", error);
-    return NextResponse.json(
-      { error: "Failed to delete comment" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete comment" }, { status: 500 });
   }
 }

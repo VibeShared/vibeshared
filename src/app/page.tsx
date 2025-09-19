@@ -291,7 +291,7 @@ export default function HomeFeed() {
                   {activeCommentSections.has(post._id) && (
                     <CommentSection
                       postId={post._id}
-                      initialComments={post.comments ?? []}
+                      
                       currentUserId={currentUserId}
                     />
                   )}
