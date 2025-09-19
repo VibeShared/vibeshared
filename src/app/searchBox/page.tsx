@@ -145,7 +145,7 @@ export default function SearchUser() {
                         <div className="d-flex align-items-center">
                           <div className="flex-shrink-0">
                             <img
-                              src={user.image || "/default-avatar.png"}
+                              src={user.image || "https://res.cloudinary.com/dlcrwtyd3/image/upload/v1757470463/3135715_niwuv2.png"}
                               alt={user.name}
                               width={60}
                               height={60}

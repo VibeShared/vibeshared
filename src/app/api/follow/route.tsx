@@ -60,11 +60,11 @@ export async function GET(req: NextRequest) {
     }
 
     let result;
-    if (type === "followers") {
-      result = await Follower.find({ following: userId }).populate("follower", "name email image");
-    } else if (type === "following") {
-      result = await Follower.find({ follower: userId }).populate("following", "name email image");
-    } else {
+   if (type === "followers") {
+  result = await Follower.find({ following: userId }).populate("follower", "name email image");
+} else if (type === "following") {
+  result = await Follower.find({ follower: userId }).populate("following", "name email image");
+} else {
       return NextResponse.json({ error: "Invalid type" }, { status: 400 });
     }
 
