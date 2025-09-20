@@ -40,58 +40,57 @@ export default function Header({ user }: { user: any }) {
   return (
     <header>
       <nav className={`navbar navbar-expand-lg fixed-top ${styles.navbar} ${isScrolled ? styles.scrolled : ""}`}>
-        <div className="container">
-          {/* Mobile menu */}
-          <button
-            className="navbar-toggler me-2 border-0"
-            type="button"
-            data-bs-toggle="offcanvas"
-            data-bs-target="#mobileMenu"
-            aria-controls="mobileMenu"
-          >
-            <span className="navbar-toggler-icon"></span>
-          </button>
+        <div className="container d-flex align-items-center justify-content-between">
 
-          {/* Logo */}
-          <Link className="navbar-brand d-flex align-items-center" href="/">
+          {/* Brand / Logo */}
+          <Link className="d-flex align-items-center d-none d-lg-block text-decoration-none" href="/">
             <Image src="/VibeShared.png" width={80} height={30} alt="VibeShared Logo" />
-            <span className="ms-2 fw-bold d-none d-sm-inline">VibeShared</span>
+            <span className="ms-2 fw-bold d-none d-lg-inline text-dark  ">VibeShared</span> {/* Hide brand text on md & sm */}
           </Link>
 
-          <div className="collapse navbar-collapse">
-            <ul className="navbar-nav me-auto">
-              <li className="nav-item">
+          {/* Navbar items for lg screens */}
+          <div className="d-none d-lg-flex align-items-center">
+            <ul className="navbar-nav me-4 d-flex flex-row align-items-center">
+              <li className="nav-item me-3">
                 <Link className="nav-link fw-semibold" href="/">Home</Link>
               </li>
               {user?.id && (
-                <li className="nav-item">
+                <li className="nav-item me-3">
                   <NotificationDropdown userId={user.id} />
                 </li>
               )}
             </ul>
 
-            {/* Desktop search */}
-            <div className="d-none d-lg-flex me-4">
-              <Link href="/searchBox">
-                <i className="bi bi-search"></i>
-              </Link>
-            </div>
-
-            <div className="d-none d-lg-flex">
-              <AuthButton />
-            </div>
-          </div>
-
-          {/* Mobile search toggle */}
-          <div className="d-lg-none d-flex align-items-center">
-            <Link
-              className="btn btn-link text-dark me-2 p-1"
-              href={'/searchBox'}
-            >
+            <Link href="/searchBox" className="me-3">
               <Search size={22} />
             </Link>
+
             <AuthButton />
           </div>
+
+          {/* Navbar items for md & sm */}
+          <div className="d-flex d-lg-none align-items-center">
+            <Link href="/" className="me-3">
+              <i className="bi bi-house-door" style={{ fontSize: "1.6rem" }}></i>
+            </Link>
+
+            <Link href="/searchBox" className="me-3">
+              <Search size={25} />
+            </Link>
+             <span  className="me-3" >
+
+            {user?.id && (
+              <NotificationDropdown userId={user.id}/>
+            )}
+            </span>
+
+          </div>
+          
+          <span className="ms-auto d-lg-none">
+            <AuthButton />
+
+          </span>
+
         </div>
 
         {/* Mobile search box */}
