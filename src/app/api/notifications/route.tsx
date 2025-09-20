@@ -61,10 +61,19 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     await connectDB();
-    const { userId, notificationId } = await req.json();
+    const { userId, notificationId, markAll } = await req.json();
 
-    if (!userId || !notificationId) {
-      return NextResponse.json({ error: "Missing userId or notificationId" }, { status: 400 });
+    if (!userId) {
+      return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+    }
+
+    if (markAll) {
+      await Notification.updateMany({ user: userId, read: false }, { read: true });
+      return NextResponse.json({ message: "All notifications marked as read" }, { status: 200 });
+    }
+
+    if (!notificationId) {
+      return NextResponse.json({ error: "Missing notificationId" }, { status: 400 });
     }
 
     const updated = await Notification.findOneAndUpdate(
