@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import  {connectDB}  from "@/lib/Connect";
 import { Follower } from "@/lib/models/Follower";
-import mongoose from "mongoose";
+import { Notification } from "@/lib/models/Notification";
+
 
 // POST → Follow a user
 export async function POST(req: NextRequest) {
@@ -18,6 +19,14 @@ export async function POST(req: NextRequest) {
     }
 
     const follow = await Follower.create({ follower: followerId, following: followingId });
+
+
+    await Notification.create({
+  user: followingId,      // Who should receive notification
+  sender: followerId,    // Who triggered it
+  type: "follow",
+  read: false,
+});
 
     return NextResponse.json(follow, { status: 201 });
   } catch (error: any) {

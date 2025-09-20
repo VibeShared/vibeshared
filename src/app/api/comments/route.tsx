@@ -4,6 +4,10 @@ import { connectDB } from "@/lib/Connect";
 import { Comment } from "@/lib/models/Comment";
 import mongoose, { Types } from "mongoose";
 import { pusherServer } from "@/lib/pusher";
+import { Notification as NotificationModel } from "@/lib/models/Notification";
+import Post from "@/lib/models/Post";
+import User from "@/lib/models/User";
+
 
 // Interfaces
 interface CreateCommentRequest {
@@ -41,47 +45,63 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB();
 
-    const body: CreateCommentRequest = await request.json();
-    const { userId, postId, text, parentId } = body;
+    const { userId, postId, text, parentId }: CreateCommentRequest = await request.json();
 
     if (!userId || !postId || !text) {
       return NextResponse.json(
-        { error: "Missing required fields: userId, postId, and text are required" },
+        { error: "Missing required fields: userId, postId, text" },
         { status: 400 }
       );
     }
 
     if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(postId)) {
-      return NextResponse.json({ error: "Invalid userId or postId format" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid userId or postId" }, { status: 400 });
     }
 
-    if (text.trim().length === 0) {
-      return NextResponse.json({ error: "Comment text cannot be empty" }, { status: 400 });
-    }
-
-    if (text.length > 1000) {
-      return NextResponse.json({ error: "Comment cannot exceed 1000 characters" }, { status: 400 });
+    if (text.trim().length === 0 || text.length > 1000) {
+      return NextResponse.json({ error: "Comment must be 1-1000 characters" }, { status: 400 });
     }
 
     // Create comment
-    const comment = await Comment.create({
+   const comment = await Comment.create({
   userId: new Types.ObjectId(userId),
   postId: new Types.ObjectId(postId),
+  parentId: parentId ? new Types.ObjectId(parentId) : null,
   text: text.trim(),
-  parentId: parentId ? new Types.ObjectId(parentId) : null, // ✅
 });
 
-    // Populate user
-    const populatedComment = await Comment.findById(comment._id)
-      .populate<{ userId: PopulatedUser }>("userId", "name image")
-      .lean();
+    // Fetch post for notification (type-safe)
+   const post = await Post.findById(postId).lean<{ _id: Types.ObjectId; userId: Types.ObjectId }>();
 
-    if (populatedComment) {
-      // 🔥 Trigger Pusher event for real-time update
-      await pusherServer.trigger(`comments-${postId}`, "new-comment", {
-        comment: populatedComment,
-      });
-    }
+if (post && post.userId.toString() !== userId) {
+  await NotificationModel.create({
+    user: post.userId,
+    sender: userId,
+    type: "comment",
+    postId: post._id,
+    read: false,
+  });
+}
+
+    // Populate user for frontend
+  const populatedComment = await Comment.findById(comment._id)
+  .populate<{ userId: { _id: Types.ObjectId; name: string; image?: string } }>(
+    "userId",
+    "name image"
+  )
+  .lean()
+  .exec();
+
+  
+  if (!populatedComment) {
+  return NextResponse.json({ error: "Failed to populate comment" }, { status: 500 });
+}
+
+
+    // Trigger real-time Pusher event
+    await pusherServer.trigger(`comments-${postId}`, "new-comment", {
+  comment: populatedComment,
+});
 
     return NextResponse.json(populatedComment, { status: 201 });
   } catch (error) {

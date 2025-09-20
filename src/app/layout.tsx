@@ -76,7 +76,7 @@ export default async function RootLayout({
         <GlobalMessages />
 
         <SessionProvider session={session}>
-          <Header />
+          <Header user={session?.user || null} />
           <Container>{children}</Container>
         </SessionProvider>
 

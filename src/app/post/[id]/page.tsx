@@ -104,17 +104,24 @@ export default async function UserPostsPage({
               <p className="mb-3 fs-6 lh-base text-dark">{post.content}</p>
 
               {/* Media */}
-              {post.mediaUrl && (
-                <div className="mb-3 rounded-3 overflow-hidden position-relative" style={{ height: '400px' }}>
-                  <Image
-                    src={post.mediaUrl}
-                    alt="Post media"
-                    fill
-                    className="rounded-3 object-fit-cover"
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  />
-                </div>
-              )}
+{post.mediaUrl && (
+  <div
+    className="mb-3 rounded-3 overflow-hidden position-relative"
+    style={{
+      aspectRatio: '4 / 5', // Instagram-style aspect ratio (tall enough, not too tall)
+      maxHeight: '80vh',   // Prevents very tall images from taking the whole screen
+    }}
+  >
+    <Image
+      src={post.mediaUrl}
+      alt="Post media"
+      fill
+      className="rounded-3 object-fit-cover"
+      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 70vw, 600px"
+      priority={false}
+    />
+  </div>
+)}
 
               {/* Stats */}
               <div className="d-flex justify-content-between text-muted small mb-2">
