@@ -1,14 +1,11 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
-import { IUser } from "./User";
+import mongoose, { Schema, model, models } from "mongoose";
 
-export interface IFollower extends Document {
-  follower: IUser["_id"];
-  following: IUser["_id"];
-  createdAt: Date;  // add this
-  updatedAt: Date;  // add this
+export interface IFollower {
+  follower: mongoose.Types.ObjectId; // who follows
+  following: mongoose.Types.ObjectId; // who is being followed
 }
 
-const FollowerSchema: Schema<IFollower> = new Schema(
+const FollowerSchema = new Schema<IFollower>(
   {
     follower: { type: Schema.Types.ObjectId, ref: "User", required: true },
     following: { type: Schema.Types.ObjectId, ref: "User", required: true },
@@ -18,5 +15,5 @@ const FollowerSchema: Schema<IFollower> = new Schema(
 
 FollowerSchema.index({ follower: 1, following: 1 }, { unique: true });
 
-export const Follower: Model<IFollower> =
-  mongoose.models.Follower || mongoose.model<IFollower>("Follower", FollowerSchema);
+export const Follower =
+  models.Follower || model<IFollower>("Follower", FollowerSchema);

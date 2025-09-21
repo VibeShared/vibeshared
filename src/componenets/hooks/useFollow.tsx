@@ -1,43 +1,49 @@
-// hooks/useFollow.ts
 import { useState, useEffect } from "react";
 
-export function useFollow(targetUserId: string, loggedInUserId?: string, onChangeCounts?: () => void) {
+export const useFollow = (
+  profileUserId: string,
+  loggedInUserId?: string,
+  onUpdate?: () => void
+) => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(false);
-useEffect(() => {
-  if (!loggedInUserId) return;
 
-  const fetchFollowing = async () => {
-    const res = await fetch(`/api/follow?userId=${loggedInUserId}&type=following`);
-    const data = await res.json();
+  useEffect(() => {
+    if (!profileUserId || !loggedInUserId) return;
 
-    if (Array.isArray(data)) {
-      // Use f.user._id instead of f.following._id
-      setIsFollowing(
-  data.some((f: any) => f.user && f.user._id === targetUserId)
-);
-    }
-  };
-
-  fetchFollowing();
-}, [loggedInUserId, targetUserId]);
+    const fetchStatus = async () => {
+      try {
+        const res = await fetch(
+          `/api/follow?userId=${profileUserId}&type=followers`
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        const following = data.some((f: any) => f.follower._id === loggedInUserId);
+        setIsFollowing(following);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchStatus();
+  }, [profileUserId, loggedInUserId]);
 
   const toggleFollow = async () => {
-    if (!loggedInUserId) return;
+    if (!profileUserId || !loggedInUserId) return;
     setLoading(true);
     try {
       const method = isFollowing ? "DELETE" : "POST";
       const res = await fetch("/api/follow", {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ followerId: loggedInUserId, followingId: targetUserId }),
+        body: JSON.stringify({
+          followerId: loggedInUserId,
+          followingId: profileUserId,
+        }),
       });
-      const data = await res.json();
-      if (!data.error) {
-        setIsFollowing(!isFollowing);
-        if (onChangeCounts) onChangeCounts();
-        
-      }
+      if (!res.ok) throw new Error("Failed to follow/unfollow");
+
+      setIsFollowing(!isFollowing);
+      if (onUpdate) onUpdate();
     } catch (err) {
       console.error(err);
     } finally {
@@ -46,5 +52,4 @@ useEffect(() => {
   };
 
   return { isFollowing, loading, toggleFollow };
-}
-
+};

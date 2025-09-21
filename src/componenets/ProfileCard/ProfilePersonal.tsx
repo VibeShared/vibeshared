@@ -84,32 +84,44 @@ export default function ProfileCard({
 
   const [followersCount, setFollowersCount] = useState<number | null>(null);
   const [followingCount, setFollowingCount] = useState<number | null>(null);
-
-  const [showFollowersModal, setShowFollowersModal] = useState(false);
-  const [showFollowingModal, setShowFollowingModal] = useState(false);
   const [followersList, setFollowersList] = useState<any[]>([]);
   const [followingList, setFollowingList] = useState<any[]>([]);
 
-  // Fetch counts and lists
+  const [showFollowersModal, setShowFollowersModal] = useState(false);
+  const [showFollowingModal, setShowFollowingModal] = useState(false);
+
+  // ✅ fetchCounts must be declared before useFollow
   const fetchCounts = useCallback(async () => {
-    if (!user.id) return;
-    try {
-      const resFollowers = await fetch(
-        `/api/follow?userId=${user.id}&type=followers`
-      );
-      const resFollowing = await fetch(
-        `/api/follow?userId=${user.id}&type=following`
-      );
-      const followers = await resFollowers.json();
-      const following = await resFollowing.json();
-      setFollowersCount(Array.isArray(followers) ? followers.length : 0);
-      setFollowingCount(Array.isArray(following) ? following.length : 0);
-      setFollowersList(Array.isArray(followers) ? followers : []);
-      setFollowingList(Array.isArray(following) ? following : []);
-    } catch (err) {
-      console.error("Failed to fetch counts", err);
-    }
-  }, [user.id]);
+  if (!user.id) return;
+  try {
+    const resFollowers = await fetch(`/api/follow?userId=${user.id}&type=followers`);
+    const resFollowing = await fetch(`/api/follow?userId=${user.id}&type=following`);
+
+    const followersData = await resFollowers.json();
+    const followingData = await resFollowing.json();
+
+    const followers = Array.isArray(followersData)
+      ? followersData.map(f => ({ user: f.follower }))
+      : [];
+    const following = Array.isArray(followingData)
+      ? followingData.map(f => ({ user: f.following }))
+      : [];
+
+    setFollowersCount(followers.length);
+    setFollowingCount(following.length);
+    setFollowersList(followers);
+    setFollowingList(following);
+  } catch (err) {
+    console.error("Failed to fetch counts:", err);
+  }
+}, [user.id]);
+
+  // Follow/unfollow hook
+  const { isFollowing, loading, toggleFollow } = useFollow(
+    user.id!,
+    loggedInUserId,
+    fetchCounts
+  );
 
   useEffect(() => {
     setFormData({
@@ -130,13 +142,6 @@ export default function ProfileCard({
     fetchCounts,
   ]);
 
-  // Follow/unfollow hook
-  const { isFollowing, loading, toggleFollow } = useFollow(
-    user.id!,
-    loggedInUserId,
-    fetchCounts
-  );
-
   const showToastMessage = useCallback(
     (message: string, variant: "success" | "danger" = "success") => {
       setToastMessage(message);
@@ -147,12 +152,12 @@ export default function ProfileCard({
   );
 
   const handleChange = useCallback(
-  (field: keyof typeof formData) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      setFormData((prev) => ({ ...prev, [field]: e.target.value }));
-    },
-  []
-);
+    (field: keyof typeof formData) =>
+      (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        setFormData((prev) => ({ ...prev, [field]: e.target.value }));
+      },
+    []
+  );
 
   const handleSave = async () => {
     if (!isOwnProfile) return;
@@ -462,27 +467,29 @@ export function FollowersModal({
           <p className="text-center text-muted">No {title.toLowerCase()} yet</p>
         ) : (
           list.map((f) => {
-  const u = f.user; // <-- use f.user
-  if (!u) return null; // safety check
-
-  return (
-    <Link
-      key={u._id}
-      href={`/profile/${u._id}`}
-      className="d-flex align-items-center mb-2 text-decoration-none text-dark"
-      onClick={onHide} // close modal when navigating
-    >
-      <Image
-        src={u.image || "https://res.cloudinary.com/dlcrwtyd3/image/upload/v1757470463/3135715_niwuv2.png"}
-        alt={u.name || "User"}
-        width={32}
-        height={32}
-        className="rounded-circle me-2"
-      />
-      <span>{u.name || "Unknown"}</span>
-    </Link>
-  );
-})
+            const u = f.user;
+            if (!u) return null;
+            return (
+              <Link
+                key={u._id}
+                href={`/profile/${u._id}`}
+                className="d-flex align-items-center mb-2 text-decoration-none text-dark"
+                onClick={onHide}
+              >
+                <Image
+                  src={
+                    u.image ||
+                    "https://res.cloudinary.com/dlcrwtyd3/image/upload/v1757470463/3135715_niwuv2.png"
+                  }
+                  alt={u.name || "User"}
+                  width={32}
+                  height={32}
+                  className="rounded-circle me-2"
+                />
+                <span>{u.name || "Unknown"}</span>
+              </Link>
+            );
+          })
         )}
       </Modal.Body>
     </Modal>
