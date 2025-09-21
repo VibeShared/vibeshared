@@ -461,29 +461,28 @@ export function FollowersModal({
         {list.length === 0 ? (
           <p className="text-center text-muted">No {title.toLowerCase()} yet</p>
         ) : (
-          list.map((f: any) => {
-            const u = f.follower || f.following;
-            return (
-              <Link
-                key={u._id}
-                href={`/profile/${u._id}`}
-                className="d-flex align-items-center mb-2 text-decoration-none text-dark"
-                onClick={onHide} // close modal when navigating
-              >
-                <Image
-                  src={
-                    u.image ||
-                    "https://res.cloudinary.com/dlcrwtyd3/image/upload/v1757470463/3135715_niwuv2.png"
-                  }
-                  alt={u.name || "User"}
-                  width={32}
-                  height={32}
-                  className="rounded-circle me-2"
-                />
-                <span>{u.name}</span>
-              </Link>
-            );
-          })
+          list.map((f) => {
+  const u = f.user; // <-- use f.user
+  if (!u) return null; // safety check
+
+  return (
+    <Link
+      key={u._id}
+      href={`/profile/${u._id}`}
+      className="d-flex align-items-center mb-2 text-decoration-none text-dark"
+      onClick={onHide} // close modal when navigating
+    >
+      <Image
+        src={u.image || "https://res.cloudinary.com/dlcrwtyd3/image/upload/v1757470463/3135715_niwuv2.png"}
+        alt={u.name || "User"}
+        width={32}
+        height={32}
+        className="rounded-circle me-2"
+      />
+      <span>{u.name || "Unknown"}</span>
+    </Link>
+  );
+})
         )}
       </Modal.Body>
     </Modal>

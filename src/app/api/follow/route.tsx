@@ -56,13 +56,24 @@ export async function DELETE(req: NextRequest) {
   }
 }
 
+const cache = new Map<string, any>();
+
 // GET → Fetch followers or following
-export async function GET(req: NextRequest) {
+export async function GET(req: Request) {
   try {
     await connectDB();
+
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get("userId");
-    const type = searchParams.get("type"); // "followers" or "following"
+  const userId = searchParams.get("userId");
+  const type = searchParams.get("type");
+  const page = Number(searchParams.get("page")) || 1;
+  const limit = Number(searchParams.get("limit")) || 20;
+  const key = `${userId}-${type}-${page}-${limit}`;
+
+
+  if (cache.has(key)) {
+    return NextResponse.json(cache.get(key));
+  }
 
     if (!userId || !type) {
       return NextResponse.json({ error: "Missing query params" }, { status: 400 });
