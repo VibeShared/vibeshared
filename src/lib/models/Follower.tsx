@@ -2,9 +2,10 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 import { IUser } from "./User";
 
 export interface IFollower extends Document {
-  follower: IUser["_id"]; // user who follows
-  following: IUser["_id"]; // user being followed
-  createdAt: Date;
+  follower: IUser["_id"];
+  following: IUser["_id"];
+  createdAt: Date;  // add this
+  updatedAt: Date;  // add this
 }
 
 const FollowerSchema: Schema<IFollower> = new Schema(
