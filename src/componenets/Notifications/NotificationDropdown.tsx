@@ -17,6 +17,25 @@ export default function NotificationDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
+
+  const markAllAsRead = async () => {
+  try {
+    await fetch(`/api/notifications`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId,
+        markAll: true
+      }),
+    });
+
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setUnreadCount(0);
+  } catch (err) {
+    console.error("Failed to mark all notifications as read:", err);
+  }
+};
+
   // ----------------------------
   // Fetch notifications from API
   // ----------------------------
@@ -80,28 +99,32 @@ export default function NotificationDropdown({
   // IntersectionObserver for marking visible notifications
   // ----------------------------
   useEffect(() => {
-    if (!notifications.length) return;
+  if (!notifications.length) return;
 
-    if (observerRef.current) observerRef.current.disconnect();
+  if (observerRef.current) observerRef.current.disconnect();
 
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const id = entry.target.getAttribute("data-id");
-            if (id) markSingleAsRead(id);
-          }
-        });
-      },
-      { threshold: 1.0 }
-    );
+  observerRef.current = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        const id = entry.target.getAttribute("data-id");
+        const notification = notifications.find((n) => n._id === id);
 
-    document
-      .querySelectorAll(".notification-item")
-      .forEach((el) => observerRef.current?.observe(el));
+        if (entry.isIntersecting && notification && !notification.read) {
+          markSingleAsRead(id!); // mark only unread
+          observerRef.current?.unobserve(entry.target); // stop observing after marking
+        }
+      });
+    },
+    { threshold: 1.0 }
+  );
 
-    return () => observerRef.current?.disconnect();
-  }, [notifications]);
+  document
+    .querySelectorAll(".notification-item")
+    .forEach((el) => observerRef.current?.observe(el));
+
+  return () => observerRef.current?.disconnect();
+}, [notifications]);
+
 
   // ----------------------------
   // Fetch notifications on page load or dropdown open
@@ -111,26 +134,25 @@ export default function NotificationDropdown({
   }, [userId]);
 
   const getNotificationText = (n: any) => {
-  const senders = n.senders || (n.sender ? [n.sender] : []);
-  const names = senders.map((s: any) => s.name);
-  let mainText = "";
+    const senders = n.senders || (n.sender ? [n.sender] : []);
+    const names = senders.map((s: any) => s.name);
+    let mainText = "";
 
-  if (names.length === 1) mainText = names[0];
-  else if (names.length === 2) mainText = `${names[0]} and ${names[1]}`;
-  else mainText = `${names[0]}, ${names[1]} and ${names.length - 2} others`;
+    if (names.length === 1) mainText = names[0];
+    else if (names.length === 2) mainText = `${names[0]} and ${names[1]}`;
+    else mainText = `${names[0]}, ${names[1]} and ${names.length - 2} others`;
 
-  switch (n.type) {
-    case "like":
-      return `${mainText} liked your post ❤️`;
-    case "comment":
-      return `${mainText} commented: "${n.commentText?.slice(0, 50)}..."`;
-    case "follow":
-      return `${mainText} started following you ➕`;
-    default:
-      return "";
-  }
-};
-
+    switch (n.type) {
+      case "like":
+        return `${mainText} liked your post ❤️`;
+      case "comment":
+        return `${mainText} commented: "${n.commentText?.slice(0, 50)}..."`;
+      case "follow":
+        return `${mainText} started following you ➕`;
+      default:
+        return "";
+    }
+  };
 
   return (
     <Dropdown
@@ -155,8 +177,14 @@ export default function NotificationDropdown({
         style={{ width: "350px", maxHeight: "400px", overflowY: "auto" }}
       >
         <div className="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
-          <strong>Notifications</strong>
-        </div>
+  <strong>Notifications</strong>
+  {unreadCount > 0 && (
+    <Button size="sm" variant="link" onClick={markAllAsRead}>
+      Mark all as read
+    </Button>
+  )}
+</div>
+        
 
         {loading ? (
           <div className="text-center py-3">
@@ -175,6 +203,7 @@ export default function NotificationDropdown({
                 n.read ? "bg-light" : "bg-white fw-bold"
               }`}
               onClick={() => {
+                markSingleAsRead(n._id); // <-- mark as read
                 if ((n.type === "like" || n.type === "comment") && n.postId) {
                   window.location.href = `/post/${n.postId}`;
                 } else if (n.type === "follow" && n.senders?.[0]?._id) {
@@ -184,22 +213,22 @@ export default function NotificationDropdown({
                 }
               }}
             >
-              <div className="d-flex" style={{ minWidth: "90px" }}>
-                {n.senders?.slice(0, 3).map((s: any, idx: number) => (
-                  <Image
-                    key={s._id}
-                    src={s.image || "https://res.cloudinary.com/dlcrwtyd3/image/upload/v1757470463/3135715_niwuv2.png"}
-                    roundedCircle
-                    style={{
-                      width: "32px",
-                      height: "32px",
-                      objectFit: "cover",
-                      border: "2px solid white",
-                      marginLeft: idx > 0 ? "-10px" : "0px",
-                    }}
-                  />
-                ))}
-              </div>
+              <div className="d-flex" style={{ minWidth: "10px" }}>
+  {[n.sender]?.slice(0, 1).map((s: any) => (
+    <Image
+      key={s._id}
+      src={s.image || "https://res.cloudinary.com/dlcrwtyd3/image/upload/v1757470463/3135715_niwuv2.png"}
+      roundedCircle
+      style={{
+        width: "32px",
+        height: "32px",
+        objectFit: "cover",
+        border: "2px solid white",
+      }}
+    />
+  ))}
+</div>
+
 
               <div className="text-truncate" style={{ maxWidth: "200px" }}>
                 <div>{getNotificationText(n)}</div>
