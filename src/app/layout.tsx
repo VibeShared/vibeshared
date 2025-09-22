@@ -74,7 +74,7 @@ export default async function RootLayout({
         <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
 
         <GlobalMessages />
-
+        
         <SessionProvider session={session}>
           <Header user={session?.user || null} />
           <Container>{children}</Container>

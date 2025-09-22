@@ -7,6 +7,8 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import DeletePostButton from "@/componenets/Other/DeletePostButton";
 
+import PostCard from "@/componenets/ProfileCard/PostCard";
+
 export default function HomeFeed() {
   const [posts, setPosts] = useState<any[]>([]);
   const [page, setPage] = useState(1);
@@ -88,6 +90,25 @@ export default function HomeFeed() {
       fetchPosts();
     }
   }, []);
+
+  useEffect(() => {
+  const videos = document.querySelectorAll<HTMLVideoElement>("video");
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target as HTMLVideoElement;
+        } else {
+          (entry.target as HTMLVideoElement).pause();
+        }
+      });
+    },
+    { threshold: 0.5 }
+  );
+
+  videos.forEach((video) => observer.observe(video));
+  return () => observer.disconnect();
+}, [posts]);
 
   // ✅ Infinite scroll observer
   useEffect(() => {
@@ -196,108 +217,15 @@ export default function HomeFeed() {
         <div className="row justify-content-center">
           <div className="col-12 col-md-8 col-lg-6">
             {posts.map((post) => (
-              <div key={post._id} className="card shadow-sm mb-4 border-0">
-                {/* Header */}
-                <div className="card-header bg-white border-0 pt-3 pb-1">
-                  <div className="d-flex align-items-center">
-                    <Link
-                      href={`/profile/${post.userId?._id ?? ""}`}
-                      className="d-flex align-items-center text-decoration-none text-dark"
-                    >
-                      <img
-                        src={
-                          post.userId?.image ||
-                          "https://res.cloudinary.com/dlcrwtyd3/image/upload/v1757470463/3135715_niwuv2.png"
-                        }
-                        alt={post.userId?.name || "Guest User"}
-                        width="40"
-                        height="40"
-                        className="rounded-circle object-fit-cover border border-2 border-white shadow-sm"
-                      />
-                      <div className="ms-3">
-                        <strong className="d-block">
-                          {post.userId?.name || "User"}
-                        </strong>
-                        <small className="text-muted">
-                          {new Date(post.createdAt).toLocaleDateString(
-                            "en-IN",
-                            {
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                            }
-                          )}
-                        </small>
-                      </div>
-                    </Link>
-                    <span className="btn btn-link text-muted ms-auto p-0">
-                      <i className="bi bi-three-dots"></i>
-
-                      <DeletePostButton
-                        postId={post._id}
-                        currentUserId={currentUserId}
-                        postOwnerId={post.userId?._id ?? ""}
-                        onDelete={handlePostDelete}
-                      />
-                    </span>
-                  </div>
-                </div>
-
-                {/* Media */}
-                {post.mediaUrl && (
-                  <div className="card-img-top">
-                    <img
-                      src={post.mediaUrl}
-                      alt="Post media"
-                      className="img-fluid w-100"
-                      style={{ objectFit: "cover", maxHeight: "500px" }}
-                    />
-                  </div>
-                )}
-
-                <div className="card-body">
-                  {/* Content */}
-                  {post.content && (
-                    <p className="card-text mb-2">{post.content}</p>
-                  )}
-
-                  {/* Stats */}
-                  <div className="d-flex justify-content-between text-muted small mb-2">
-                    <span>{post.likesCount} likes</span>
-                    <span>{post.comments?.length ?? 0} comments</span>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="d-flex justify-content-between border-top border-bottom py-2 mb-3">
-                    <LikeButton
-                      postId={post._id}
-                      initialCount={post.likesCount}
-                      currentUserId={currentUserId}
-                    />
-                    <button
-                      className="btn btn-sm btn-outline-secondary rounded-pill d-flex align-items-center"
-                      onClick={() => toggleComments(post._id)}
-                    >
-                      <i className="bi bi-chat me-1"></i>
-                      Comment
-                    </button>
-                    <button className="btn btn-sm btn-outline-secondary rounded-pill d-flex align-items-center">
-                      <i className="bi bi-share me-1"></i>
-                      Share
-                    </button>
-                  </div>
-
-                  {/* Comments Section */}
-                  {activeCommentSections.has(post._id) && (
-                    <CommentSection
-                      postId={post._id}
-                      
-                      currentUserId={currentUserId}
-                    />
-                  )}
-                </div>
-              </div>
-            ))}
+  <PostCard
+    key={post._id}
+    post={post}
+    currentUserId={currentUserId}
+    isCommentsOpen={activeCommentSections.has(post._id)}
+    toggleComments={toggleComments}
+    onDelete={handlePostDelete}
+  />
+))}
 
             {/* Infinite Scroll Loader */}
             <div ref={loaderRef} className="text-center py-3">
