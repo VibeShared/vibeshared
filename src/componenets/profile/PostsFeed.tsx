@@ -1,15 +1,12 @@
-// src\componenets\profile\PostsFeed.tsx
-
 "use client";
+
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Card, Tabs, Tab, Row, Col } from "react-bootstrap";
+import { Spinner } from "react-bootstrap";
+import style from "@/styles/componenet/profile/PostsFeed.module.css";
 
 interface CloudinaryFile {
   url: string;
-  public_id: string;
-  format: string;
-  resource_type: string;
   postId: string;
   userId: string;
 }
@@ -18,77 +15,74 @@ interface PostsFeedProps {
   userId: string;
 }
 
-export default function ProfilePage({userId}: PostsFeedProps) {
+export default function PostsFeed({ userId }: PostsFeedProps) {
   const router = useRouter();
   const params = useParams();
-  // const userId = params?.id as string;
 
-  const [photos, setPhotos] = useState<CloudinaryFile[]>([]);
+  const [media, setMedia] = useState<CloudinaryFile[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!userId) return;
 
-    async function fetchPhotos() {
+    async function fetchMedia() {
       try {
         setLoading(true);
         const res = await fetch(`/api/user-media/${userId}`);
         const data = await res.json();
-        
-        setPhotos(data.media || []);
+        setMedia(data.media || []);
       } catch (error) {
-        console.error("Failed to fetch photos:", error);
+        console.error("Failed to fetch media:", error);
       } finally {
         setLoading(false);
       }
     }
 
-    fetchPhotos();
+    fetchMedia();
   }, [userId]);
 
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center my-4">
+        <Spinner animation="border" />
+      </div>
+    );
+  }
+
+  if (media.length === 0) {
+    return <p className="text-muted text-center my-3">No posts yet</p>;
+  }
+
   return (
-    <Tabs defaultActiveKey="posts" className="mb-3">
-      {/* Posts Tab will go here */}
-
-      <Tab eventKey="photos" title="Photos">
-        <Card className="shadow-sm ">
-          <Card.Body>
-            {loading ? (
-              <p className="text-muted"> 
-                Vibes... <span className="spinner-border"></span>
-              </p>
-            ) : photos.length === 0 ? (
-              <p className="text-muted">No photos found</p>
+    <div className={style.instaGrid}>
+      {media.map((item, index) => {
+        const isVideo = item.url.match(/\.(mp4|webm|ogg)$/i);
+        return (
+          <div
+            key={`${item.postId}-${index}`}
+            className={style.instaItem}
+            onClick={() => router.push(`/post/${userId}`)}
+          >
+            {isVideo ? (
+              <>
+                <video
+                  src={item.url}
+                  muted
+                  playsInline
+                  preload="metadata"
+                  className={style.instaVideo}
+                  onLoadedMetadata={(e) => (e.currentTarget.currentTime = 0.1)}
+                />
+                <div className={style.instaOverlay}>
+                  <i className="bi bi-play-fill"></i>
+                </div>
+              </>
             ) : (
-              <Row>
-                {photos.map((photo, index) => (
-                  <Col
-                    xs={6}
-                    sm={4}
-                    className="mb-3 "
-                    key={`${photo.postId}-${index}`} // ✅ unique key (postId + index)
-                  >
-                    <div
-                      onClick={() => router.push(`/post/${userId}`)}
-                      style={{
-                        height: "120px",
-                        width: "120px",
-                        backgroundImage: `url(${photo.url})`,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
-                        borderRadius: "8px",
-                        cursor: "pointer",
-                      }}
-                    />
-                  </Col>
-                ))}
-              </Row>
+              <img src={item.url} className={style.instaImg} alt="post" />
             )}
-          </Card.Body>
-        </Card>
-      </Tab>
-
-      {/* About Tab will go here */}
-    </Tabs>
+          </div>
+        );
+      })}
+    </div>
   );
 }
