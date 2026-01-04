@@ -1,0 +1,161 @@
+.profileCard {
+  --pc-bg: #ffffff;
+  --accent-1: linear-gradient(135deg,#6f42c1 0%, #0d6efd 100%);
+  --muted: #6c757d;
+  --soft: #f8f9fa;
+  --card-radius: 14px;
+  --glass: rgba(255,255,255,0.6);
+
+  border-radius: var(--card-radius);
+  overflow: hidden;
+  background: var(--pc-bg);
+  transition: transform .18s ease, box-shadow .18s ease;
+  border: 1px solid rgba(16,24,40,0.04);
+}
+
+
+/* Card wrapper */
+.profileCard {
+  border-radius: var(--card-radius);
+  overflow: hidden;
+  background: var(--pc-bg);
+  transition: transform .18s ease, box-shadow .18s ease;
+  border: 1px solid rgba(16,24,40,0.04);
+}
+.profileCard:hover{
+  transform: translateY(-4px);
+  box-shadow: 0 10px 30px rgba(16,24,40,0.08);
+}
+
+/* Header / avatar area */
+.header{
+  background: linear-gradient(180deg, rgba(13,110,253,0.04), transparent 70%);
+  padding-top: 10px;
+  padding-bottom: 6px;
+}
+
+/* Avatar wrap so buttons can be placed nicely */
+.avatarWrap{
+  position: relative;
+  width: 128px;
+  height: 128px;
+  display: inline-block;
+  border-radius: 50%;
+}
+
+/* Avatar image */
+.avatar{
+  object-fit: cover;
+  border: 4px solid rgba(255,255,255,1);
+  box-shadow: 0 6px 18px rgba(13,110,253,0.08);
+  transition: transform .18s ease;
+}
+.avatar:hover{
+  transform: scale(1.03);
+}
+
+/* upload button (bottom-right) */
+.uploadBtn{
+  right: 6px;
+  bottom: 6px;
+  width: 36px;
+  height: 36px;
+  padding: 6px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-1);
+  color: #fff;
+  border: none;
+  box-shadow: 0 4px 12px rgba(11, 84, 155, 0.12);
+}
+.uploadBtn:hover {
+  filter: brightness(.98);
+}
+
+/* remove image button (top-right) */
+.removeBtn{
+  right: 6px;
+  top: 6px;
+  width: 30px;
+  height: 30px;
+  padding: 5px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #dc3545;
+  color: #fff;
+  border: none;
+  box-shadow: 0 6px 14px rgba(220,53,69,0.12);
+}
+
+/* Name and handle */
+.name{
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+.handle{
+  letter-spacing: 0.3px;
+  color: var(--muted);
+}
+.bio{
+  color: var(--muted);
+  margin-top: 6px;
+  margin-bottom: 6px;
+  max-width: 260px;
+}
+
+/* Followers / Following count buttons */
+.countBtn{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 8px;
+  transition: background .12s ease, transform .12s ease;
+}
+.countBtn:hover{
+  background: var(--soft);
+  transform: translateY(-2px);
+}
+.countBadge{
+  display: inline-block;
+  min-width: 46px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #fff;
+  background: linear-gradient(90deg,#0d6efd 0%, #6610f2 100%);
+  box-shadow: 0 6px 18px rgba(13,110,253,0.1);
+}
+
+/* Edit button */
+.editBtn{
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+  box-shadow: 0 6px 14px rgba(13,110,253,0.06);
+}
+
+/* Follow button */
+.followBtn{
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.followBtn:hover{
+  transform: translateY(-3px);
+  box-shadow: 0 10px 26px rgba(13,110,253,0.08);
+}
+
+/* Responsive tweaks */
+@media (max-width: 576px){
+  .avatarWrap{ width: 96px; height: 96px; }
+  .countBadge{ min-width: 36px; padding: 4px 8px; font-size: 0.85rem; }
+  .bio{ max-width: 200px; font-size: 0.95rem; }
+}

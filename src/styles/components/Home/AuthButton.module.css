@@ -1,0 +1,76 @@
+/* 🔹 Username */
+.authName {
+  font-weight: 600;
+  color: #212529;
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+/* 🔹 Avatar Image */
+.authAvatar {
+  border-radius: 50%;
+  border: 3px solid #ddd;
+  object-fit: cover;
+  transition: transform 0.2s ease;
+}
+
+.authAvatar:hover {
+  transform: scale(1.05);
+}
+
+/* 🔹 Dropdown Menu */
+.dropdownMenu {
+  position: absolute;
+  right: 0;
+  margin-top: 0.5rem;
+  min-width: 180px;
+  background: #fff;
+  color: #212529;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 0.75rem;
+  z-index: 1000;
+}
+
+.dropdownMenu p {
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 0.5rem;
+}
+
+/* ======================
+   📱 Responsive Styles
+   ====================== */
+
+/* Small devices (mobile) */
+@media (max-width: 576px) {
+  .dropdownMenu {
+    min-width: 150px;
+    font-size: 0.9rem;
+    padding: 0.5rem;
+  }
+}
+
+/* Medium devices (tablets) */
+@media (min-width: 577px) and (max-width: 992px) {
+  .authName {
+    font-size: 0.95rem;
+  }
+
+  .dropdownMenu {
+    min-width: 160px;
+  }
+}
+
+/* Large devices (desktop) */
+@media (min-width: 993px) {
+  .authName {
+    font-size: 1rem;
+  }
+
+  .dropdownMenu {
+    min-width: 180px;
+  }
+}

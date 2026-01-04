@@ -1,0 +1,80 @@
+import mongoose, { Schema, Document } from "mongoose";
+
+export interface IUser extends Document {
+  name: string;
+  username: string;
+  email: string;
+  image?: string;
+  password?: string;
+  accessToken?: string;
+  refreshToken?: string;
+  refreshTokenExpiresAt?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
+   bio?: string;
+  location?: string;
+  website?: string;
+  cloudinary_id?: string;
+  isPrivate?: boolean;
+  isVerified?: boolean;
+  role?: "user" | "admin";
+  status?: "active" | "suspended" | "deleted";
+}
+
+const UserSchema = new Schema<IUser>({
+  name: { type: String, unique: true, maxlength : 50 },
+  email: { type: String, unique: true },
+ image: {
+      type: String,
+      default:
+        "https://res.cloudinary.com/dlcrwtyd3/image/upload/v1757470463/3135715_niwuv2.png", // default avatar
+    },
+
+    username: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true,
+    trim: true,
+    minlength: 3,
+    maxlength: 30,
+  },
+
+  isPrivate: {
+    type: Boolean,
+    default: false,
+  },
+
+  isVerified: {
+    type: Boolean,
+    default: false,
+  },
+
+  role: {
+    type: String,
+    enum: ["user", "admin"],
+    default: "user",
+  },
+
+  status: {
+    type: String,
+    enum: ["active", "suspended", "deleted"],
+    default: "active",
+  },
+
+  password: String,
+   cloudinary_id: String,
+  bio: { type: String, maxlength: 200 },
+  location: { type: String },
+  website: { type: String },
+  accessToken: String,
+  refreshToken: String,
+  refreshTokenExpiresAt: {
+  type: Date,
+  default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+},
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+});
+
+export default mongoose.models.User || mongoose.model<IUser>("User", UserSchema);

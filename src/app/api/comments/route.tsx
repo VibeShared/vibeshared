@@ -1,0 +1,234 @@
+// app/api/comments/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { connectDB } from "@/lib/Connect";
+import { Comment } from "@/lib/models/Comment";
+import mongoose, { Types } from "mongoose";
+import { pusherServer } from "@/lib/pusher";
+import { Notification as NotificationModel } from "@/lib/models/Notification";
+import { Wallet } from "@/lib/models/Wallet";
+import Post from "@/lib/models/Post";
+import  "@/lib/models/User";
+
+
+// Interfaces
+interface CreateCommentRequest {
+  userId: string;
+  postId: string;
+  text: string;
+   parentId?: string; // ✅ allow replies
+}
+
+
+interface DeleteCommentRequest {
+  commentId: string;
+  userId: string;
+}
+
+interface PopulatedUser {
+  _id: Types.ObjectId;
+  name: string;
+  image?: string;
+}
+
+interface PopulatedComment {
+  _id: string;
+  text: string;
+  userId: PopulatedUser;
+  createdAt: Date;
+}
+
+interface DeleteCommentPayload {
+  commentId: string;
+}
+
+// POST - Create a new comment
+export async function POST(request: NextRequest) {
+  let session;
+  try {
+    await connectDB();
+    session = await mongoose.startSession();
+    session.startTransaction();
+
+    const { userId, postId, text, parentId, tipAmount = 0 } = await request.json();
+
+    // ✅ Validation
+    if (!userId || !postId || !text) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+    if (text.trim().length === 0 || text.length > 1000) {
+      return NextResponse.json({ error: "Comment must be 1-1000 characters" }, { status: 400 });
+    }
+    if (tipAmount < 0 || tipAmount > 10000) {
+      return NextResponse.json({ error: "Invalid tip amount" }, { status: 400 });
+    }
+
+    const post = await Post.findById(postId).session(session);
+    if (!post) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
+
+    // ✅ Create comment
+    const comment = await Comment.create([{
+      userId: new Types.ObjectId(userId),
+      postId: new Types.ObjectId(postId),
+      parentId: parentId ? new Types.ObjectId(parentId) : null,
+      text: text.trim(),
+      tipAmount,
+      isHighlighted: tipAmount > 0,
+    }], { session });
+
+    // ✅ Handle tip
+    let updatedWallet = null;
+    if (tipAmount > 0) {
+      const platformFee = tipAmount * 0.30;
+      const creatorAmount = tipAmount - platformFee;
+
+      updatedWallet = await Wallet.findOneAndUpdate(
+        { userId: post.userId },
+        { 
+          $inc: { balance: creatorAmount, totalEarned: creatorAmount },
+          $push: {
+            transactions: {
+              type: "credit",
+              amount: creatorAmount,
+              status: "completed",
+              createdAt: new Date()
+            }
+          }
+        },
+        { upsert: true, new: true, session }
+      );
+
+      if (!updatedWallet) throw new Error("Failed to update creator wallet");
+    }
+
+    // ✅ Notification (skip if self-comment)
+    if (post.userId.toString() !== userId) {
+      await NotificationModel.create([{
+        user: post.userId,
+        sender: userId,
+        type: tipAmount > 0 ? "tip" : "comment",
+        postId: post._id,
+        read: false,
+        message: tipAmount > 0 ? `You received ₹${tipAmount} tip!` : undefined,
+      }], { session });
+    }
+
+    // ✅ Commit transaction
+    await session.commitTransaction();
+
+    // ✅ Populate comment for response
+    const populatedComment = await Comment.findById(comment[0]._id)
+      .populate("userId", "name image")
+      .lean();
+
+    // ✅ Trigger Pusher
+    await pusherServer.trigger(`comments-${postId}`, "new-comment", {
+      comment: populatedComment,
+      wallet: updatedWallet ? updatedWallet.toObject() : null, // optional for frontend
+    });
+
+    return NextResponse.json(populatedComment, { status: 201 });
+  } catch (error) {
+    if (session && session.inTransaction()) {
+      await session.abortTransaction();
+    }
+    console.error("Create Comment error:", error);
+    return NextResponse.json({ error: "Failed to create comment" }, { status: 500 });
+  } finally {
+    if (session) session.endSession();
+  }
+}
+
+
+
+// GET - Fetch comments with replies
+export async function GET(request: NextRequest) {
+  try {
+    await connectDB();
+
+    const { searchParams } = new URL(request.url);
+    const postId = searchParams.get("postId");
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "5");
+
+    if (!postId) {
+      return NextResponse.json({ error: "Post ID is required" }, { status: 400 });
+    }
+
+    // Fetch all comments for the post
+    const allComments = await Comment.find({ postId: new Types.ObjectId(postId) })
+      .populate("userId", "name image")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Build nested structure
+    const map = new Map<string, any>();
+    allComments.forEach((c) => {
+      map.set(c._id.toString(), { ...c, replies: [] });
+    });
+
+    const rootComments: any[] = [];
+    allComments.forEach((c) => {
+      if (c.parentId) {
+        const parent = map.get(c.parentId.toString());
+        if (parent) parent.replies.push(map.get(c._id.toString()));
+      } else {
+        rootComments.push(map.get(c._id.toString()));
+      }
+    });
+
+    // Paginate root comments only
+    const start = (page - 1) * limit;
+    const paginated = rootComments.slice(start, start + limit);
+
+    return NextResponse.json({
+      comments: paginated,
+      total: rootComments.length,
+      page,
+      hasMore: start + paginated.length < rootComments.length,
+    });
+  } catch (error) {
+    console.error("Fetch Comments error:", error);
+    return NextResponse.json({ error: "Failed to fetch comments" }, { status: 500 });
+  }
+}
+
+
+// DELETE - Delete a comment
+export async function DELETE(request: NextRequest) {
+  try {
+    await connectDB();
+
+    const body: DeleteCommentRequest = await request.json();
+    const { commentId, userId } = body;
+
+    if (!commentId || !userId) {
+      return NextResponse.json({ error: "commentId and userId are required" }, { status: 400 });
+    }
+
+    if (!Types.ObjectId.isValid(commentId) || !Types.ObjectId.isValid(userId)) {
+      return NextResponse.json({ error: "Invalid commentId or userId format" }, { status: 400 });
+    }
+
+    const comment = await Comment.findById(commentId);
+    if (!comment) {
+      return NextResponse.json({ error: "Comment not found" }, { status: 404 });
+    }
+
+    if ((comment.userId as Types.ObjectId).toString() !== userId) {
+      return NextResponse.json({ error: "Not authorized to delete this comment" }, { status: 403 });
+    }
+
+    await Comment.deleteOne({ _id: commentId });
+
+    // 🔥 Trigger Pusher event for real-time delete
+    const payload: DeleteCommentPayload = { commentId };
+    await pusherServer.trigger(`comments-${comment.postId}`, "delete-comment", payload);
+
+    return NextResponse.json({ message: "Comment deleted successfully" });
+  } catch (error) {
+    console.error("Delete Comment error:", error);
+    return NextResponse.json({ error: "Failed to delete comment" }, { status: 500 });
+  }
+}
