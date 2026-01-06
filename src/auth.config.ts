@@ -1,14 +1,11 @@
 // src/auth.config.ts
-import type { NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
 import Facebook from "next-auth/providers/facebook";
 import Twitter from "next-auth/providers/twitter";
+import { NextAuthConfig } from "next-auth";
 
-const isLocal = process.env.NODE_ENV !== "production";
-
-const authConfig: NextAuthConfig = {
+export const authConfig: NextAuthConfig = {
   trustHost: true,
-  
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -23,20 +20,16 @@ const authConfig: NextAuthConfig = {
       clientSecret: process.env.TWITTER_CLIENT_SECRET!,
     }),
   ],
-
   pages: {
     signIn: "/login",
   },
-  
   callbacks: {
-    authorized({ auth, request: { nextUrl } }) {
-      const isLoggedIn = !!auth?.user;
-      const isOnDashboard = nextUrl.pathname.startsWith("/dashboard");
-      if (isOnDashboard) return isLoggedIn;
-      return true;
+    // Note: Detailed logic moved to middleware for better control
+    authorized({ auth }) {
+      return !!auth; 
     },
   },
+  session: { strategy: "jwt" },
 };
 
-session: { strategy: "jwt" }
 export default authConfig;

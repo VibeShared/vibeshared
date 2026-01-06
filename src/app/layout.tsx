@@ -9,8 +9,6 @@ import Container from "@/components/Other/Container";
 import GlobalMessages from "@/components/GlobalMessage";
 import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "react-hot-toast";
-
-// ✅ Import 'auth' from your config, NOT 'getServerSession' or 'authOptions'
 import { auth } from "@/lib/auth"; 
 
 

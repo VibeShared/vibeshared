@@ -1,4 +1,4 @@
-// src/auth.ts
+// src/lib/auth.ts
 import NextAuth, { type DefaultSession } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
@@ -17,6 +17,7 @@ declare module "next-auth" {
       isVerified: boolean;
     } & DefaultSession["user"];
   }
+
   interface User {
     username?: string;
     role?: string;
@@ -25,48 +26,38 @@ declare module "next-auth" {
   }
 }
 
-// --- Helper Functions ---
-async function generateUniqueUsername(base: string): Promise<string> {
-  let username = base.toLowerCase().replace(/[^a-z0-9_]/g, "");
-  await connectDB();
-  let isTaken = await User.exists({ username });
-
-  
-  let counter = 1;
-  while (isTaken) {
-    const newUsername = `${username}${counter}`;
-    isTaken = await User.exists({ username: newUsername });
-    if (!isTaken) return newUsername;
-    counter++;
-  }
-  return username;
-}
-
 const isLocal = process.env.NODE_ENV !== "production";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
-  secret: process.env.AUTH_SECRET,
-  trustHost: true,
-  session: { strategy: "jwt" },
-   cookies: {
+  secret: process.env.AUTH_SECRET!,
+
+  cookies: {
     sessionToken: {
+      name: isLocal
+        ? "authjs.session-token"
+        : "__Secure-authjs.session-token",
       options: {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        secure: !isLocal
-      }
+        secure: !isLocal,
+      },
     },
+
     csrfToken: {
+      name: isLocal
+        ? "authjs.csrf-token"
+        : "__Host-authjs.csrf-token",
       options: {
         httpOnly: false,
         sameSite: "lax",
         path: "/",
-        secure: !isLocal
-      }
-    }
+        secure: !isLocal,
+      },
+    },
   },
+
   providers: [
     ...authConfig.providers,
     Credentials({
@@ -75,20 +66,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         identifier: { label: "Email or Username", type: "text" },
         password: { label: "Password", type: "password" },
       },
+
       async authorize(credentials) {
         if (!credentials?.identifier || !credentials.password) return null;
 
         await connectDB();
+
         const user = await User.findOne({
           $or: [
             { email: credentials.identifier },
-            { username: typeof credentials.identifier === "string" ? credentials.identifier.toLowerCase() : credentials.identifier },
+            {
+              username:
+                typeof credentials.identifier === "string"
+                  ? credentials.identifier.toLowerCase()
+                  : credentials.identifier,
+            },
           ],
         }).select("+password");
 
         if (!user || !user.password || user.status !== "active") return null;
 
-        const isValid = await bcrypt.compare(credentials.password as string, user.password);
+        const isValid = await bcrypt.compare(
+          credentials.password as string,
+          user.password
+        );
+
         if (!isValid) return null;
 
         return {
@@ -104,9 +106,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
+
   callbacks: {
     async signIn({ user, account }) {
-      // Logic for Social Login (OAuth)
       if (account?.provider !== "credentials") {
         if (!user.email) return false;
 
@@ -114,27 +116,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         let dbUser = await User.findOne({ email: user.email });
 
         if (!dbUser) {
-          const baseUsername = user.name?.split(" ")[0] || user.email.split("@")[0];
-          const username = await generateUniqueUsername(baseUsername);
+          const baseUsername =
+            user.name?.split(" ")[0] || user.email.split("@")[0];
 
-          // Create the user in MongoDB
           const newUser = await User.create({
-            name: user.name || username,
+            name: user.name || baseUsername,
             email: user.email,
-            username,
+            username: baseUsername.toLowerCase(),
             image: user.image,
             isVerified: true,
             role: "user",
             status: "active",
           });
-          
-          // Attach DB fields to the user object for the JWT callback
+
           user.id = newUser._id.toString();
           user.username = newUser.username;
           user.role = newUser.role;
         } else {
           if (dbUser.status !== "active") return false;
-          // Update the user object with DB data for the JWT callback
           user.id = dbUser._id.toString();
           user.username = dbUser.username;
           user.role = dbUser.role;
@@ -144,9 +143,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
 
     async jwt({ token, user }) {
-      // Initial sign in
       if (user) {
-        token.id = user.id as string;
+        token.id = user.id;
         token.username = user.username;
         token.role = user.role;
         token.isPrivate = user.isPrivate;
@@ -156,7 +154,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
 
     async session({ session, token }) {
-      if (session.user && token) {
+      if (session.user) {
         session.user.id = token.id as string;
         session.user.username = token.username as string;
         session.user.role = token.role as string;

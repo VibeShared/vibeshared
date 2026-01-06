@@ -1,88 +1,49 @@
+// middleware.ts
+import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
+import type { NextAuthRequest } from "next-auth";
 
-export async function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+export default auth((req: NextAuthRequest) => {
+  const { nextUrl } = req;
+  const pathname = nextUrl.pathname;
 
-  /**
-   * 1️⃣ Public routes (no auth required)
-   */
-  const publicRoutes = [
-    "/login",
-    "/signup",
-    "/api/auth",
-  ];
+  const isLoggedIn = !!req.auth;
+  const role = req.auth?.user?.role;
 
-  if (publicRoutes.some(route => pathname.startsWith(route))) {
-    return NextResponse.next();
+  const AUTH_ROUTES = ["/login", "/signup"];
+  const isAuthRoute = AUTH_ROUTES.includes(pathname);
+
+  const isAdminRoute = pathname.startsWith("/admin");
+
+  const isProtectedRoute =
+    pathname === "/" ||
+    pathname.startsWith("/profile") ||
+    pathname.startsWith("/settings") ||
+    pathname.startsWith("/search") ||
+    isAdminRoute;
+
+  // 1️⃣ Block unauthenticated users
+  if (!isLoggedIn && isProtectedRoute) {
+    const loginUrl = new URL("/login", nextUrl.origin);
+    loginUrl.searchParams.set("callbackUrl", nextUrl.href);
+    return NextResponse.redirect(loginUrl);
   }
 
-  /**
-   * 2️⃣ Get JWT token
-   */
-  const token = await getToken({
-    req,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: process.env.NODE_ENV === "production",
-  });
-
-  const isAuthenticated = !!token;
-
-  /**
-   * 3️⃣ Protected routes (login required)
-   */
-  const protectedRoutes = [
-    "/profile",
-    "/settings",
-    "/wallet",
-    "/post",
-  ];
-
-  if (
-    !isAuthenticated &&
-    protectedRoutes.some(route => pathname.startsWith(route))
-  ) {
-    return NextResponse.redirect(new URL("/login", req.url));
+  // 2️⃣ Admin guard
+  if (isLoggedIn && isAdminRoute && role !== "admin") {
+    return NextResponse.redirect(new URL("/", nextUrl.origin));
   }
 
-  /**
-   * 4️⃣ Prevent logged-in users from visiting auth pages
-   */
-  if (
-    isAuthenticated &&
-    (pathname.startsWith("/login") || pathname.startsWith("/signup"))
-  ) {
-    return NextResponse.redirect(new URL("/", req.url));
-  }
-
-  /**
-   * 5️⃣ Admin-only routes (RBAC)
-   */
-  if (pathname.startsWith("/admin")) {
-    if (!isAuthenticated || token?.role !== "admin") {
-      return NextResponse.redirect(new URL("/", req.url));
-    }
-  }
-
-  /**
-   * 6️⃣ Block suspended / deleted users
-   */
-  if (token?.status && token.status !== "active") {
-    return NextResponse.redirect(new URL("/login", req.url));
+  // 3️⃣ Prevent logged-in users from auth pages
+  if (isLoggedIn && isAuthRoute) {
+    return NextResponse.redirect(new URL("/", nextUrl.origin));
   }
 
   return NextResponse.next();
-}
+});
 
 export const config = {
   matcher: [
-    "/profile/:path*",
-    "/settings/:path*",
-    "/wallet/:path*",
-    "/post/:path*",
-    "/admin/:path*",
-    "/login",
-    "/signup",
+    "/((?!_next|api|favicon.ico).*)",
   ],
 };
