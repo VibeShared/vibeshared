@@ -1,3 +1,4 @@
+// src/components/Post component/PostCard.tsx
 "use client";
 
 import Link from "next/link";
@@ -124,7 +125,7 @@ export default function PostCard({
       <div className="card-header bg-white border-0 pt-3 pb-1">
         <div className="d-flex align-items-center">
           <Link
-            href={`/profile/${post.userId?._id ?? ""}`}
+            href={`/profile/${post.userId?.username ?? ""}`}
             className="d-flex align-items-center text-decoration-none text-dark"
           >
             <img
@@ -132,13 +133,13 @@ export default function PostCard({
                 post.userId?.image ||
                 "https://res.cloudinary.com/dlcrwtyd3/image/upload/v1757470463/3135715_niwuv2.png"
               }
-              alt={post.userId?.name || "Guest User"}
+              alt={post.userId?.username || "Guest User"}
               width="40"
               height="40"
               className="rounded-circle object-fit-cover border border-2 border-white shadow-sm"
             />
             <div className="ms-3">
-              <strong className="d-block">{post.userId?.name || "User"}</strong>
+              <strong className="d-block">{post.userId?.username || "User"}</strong>
               <small className="text-muted">
                 {new Date(post.createdAt).toLocaleDateString("en-IN", {
                   year: "numeric",

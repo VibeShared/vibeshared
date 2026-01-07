@@ -19,7 +19,7 @@ export const GET = auth(async (req, { params }) => {
     if (!post) return NextResponse.json({ error: "Post not found" }, { status: 404 });
 
     const comments = (await Comment.find({ postId: post._id })
-      .populate("userId", "name image")
+      .populate("userId", "usernamename image")
       .sort({ createdAt: -1 })
       .lean()) as (IComment & { userId: { name?: string; image?: string } })[];
 

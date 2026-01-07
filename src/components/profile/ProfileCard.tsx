@@ -1,4 +1,3 @@
-// src/components/ProfileCard/ProfilePersonal.tsx
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -19,7 +18,7 @@ import { z } from "zod";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { useFollow } from "@/components/hooks/useFollow";
-import Link from "next/link";
+import { FollowersModal } from "./FollowersModal";
 
 interface UserProfile {
   id?: string;
@@ -31,13 +30,6 @@ interface UserProfile {
   website?: string | null;
 }
 
-interface FollowersModalProps {
-  show: boolean;
-  onHide: () => void;
-  list: any[];
-  title: string;
-}
-
 interface ProfileCardProps {
   user: UserProfile;
   isOwnProfile?: boolean;
@@ -45,17 +37,17 @@ interface ProfileCardProps {
 
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
-  bio: z.string().max(200, "Bio must be under 200 characters").optional(),
+  bio: z.string().max(200).optional(),
   location: z.string().optional(),
   website: z
     .string()
     .optional()
     .refine((val) => !val || /^https?:\/\/.+\..+/.test(val), {
-      message: "Must be a valid URL (start with http:// or https://)",
+      message: "Must be a valid URL",
     }),
 });
 
-export default function ProfileCard({
+export default function ProfilePersonal({
   user,
   isOwnProfile = false,
 }: ProfileCardProps) {
@@ -63,24 +55,27 @@ export default function ProfileCard({
   const loggedInUserId = session?.user?.id;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const lastApiCallRef = useRef<number>(0);
-  const lastFollowClick = useRef<number>(0);
+  const lastApiCallRef = useRef(0);
+  const lastFollowClick = useRef(0);
 
   const [showEdit, setShowEdit] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
   const [formData, setFormData] = useState({
     name: user.name || "",
     bio: user.bio || "",
     location: user.location || "",
     website: user.website || "",
   });
-  const [isSaving, setIsSaving] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+
   const [imagePreview, setImagePreview] = useState(user.image || "");
-  const [toastMessage, setToastMessage] = useState("");
-  const [toastVariant, setToastVariant] = useState<"success" | "danger">(
-    "success"
-  );
-  const [showToast, setShowToast] = useState(false);
+
+  const [toast, setToast] = useState({
+    show: false,
+    message: "",
+    variant: "success" as "success" | "danger",
+  });
 
   const [followersCount, setFollowersCount] = useState<number | null>(null);
   const [followingCount, setFollowingCount] = useState<number | null>(null);
@@ -90,33 +85,27 @@ export default function ProfileCard({
   const [showFollowersModal, setShowFollowersModal] = useState(false);
   const [showFollowingModal, setShowFollowingModal] = useState(false);
 
-  // ✅ fetchCounts must be declared before useFollow
+  const showToast = (message: string, variant: "success" | "danger" = "success") =>
+    setToast({ show: true, message, variant });
+
+  // ================= Fetch followers/following =================
   const fetchCounts = useCallback(async () => {
-  if (!user.id) return;
-  try {
-    const resFollowers = await fetch(`/api/follow?userId=${user.id}&type=followers`);
-    const resFollowing = await fetch(`/api/follow?userId=${user.id}&type=following`);
+    if (!user.id) return;
 
-    const followersData = await resFollowers.json();
-    const followingData = await resFollowing.json();
+    const [followersRes, followingRes] = await Promise.all([
+      fetch(`/api/follow?userId=${user.id}&type=followers`),
+      fetch(`/api/follow?userId=${user.id}&type=following`),
+    ]);
 
-    const followers = Array.isArray(followersData)
-      ? followersData.map(f => ({ user: f.follower }))
-      : [];
-    const following = Array.isArray(followingData)
-      ? followingData.map(f => ({ user: f.following }))
-      : [];
+    const followers = await followersRes.json();
+    const following = await followingRes.json();
 
     setFollowersCount(followers.length);
     setFollowingCount(following.length);
-    setFollowersList(followers);
-    setFollowingList(following);
-  } catch (err) {
-    console.error("Failed to fetch counts:", err);
-  }
-}, [user.id]);
+    setFollowersList(followers.map((f: any) => ({ user: f.follower })));
+    setFollowingList(following.map((f: any) => ({ user: f.following })));
+  }, [user.id]);
 
-  // Follow/unfollow hook
   const { isFollowing, loading, toggleFollow } = useFollow(
     user.id!,
     loggedInUserId,
@@ -132,395 +121,144 @@ export default function ProfileCard({
     });
     setImagePreview(user.image || "");
     fetchCounts();
-  }, [
-    user.id,
-    user.name,
-    user.bio,
-    user.location,
-    user.website,
-    user.image,
-    fetchCounts,
-  ]);
+  }, [user, fetchCounts]);
 
-  const showToastMessage = useCallback(
-    (message: string, variant: "success" | "danger" = "success") => {
-      setToastMessage(message);
-      setToastVariant(variant);
-      setShowToast(true);
-    },
-    []
-  );
-
-  const handleChange = useCallback(
-    (field: keyof typeof formData) =>
-      (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setFormData((prev) => ({ ...prev, [field]: e.target.value }));
-      },
-    []
-  );
-
+  // ================= Handlers =================
   const handleSave = async () => {
-    if (!isOwnProfile) return;
+    if (!isOwnProfile || !user.id) return;
 
-    const now = Date.now();
-    if (now - lastApiCallRef.current < 2000) {
-      showToastMessage("Please wait before making another request", "danger");
+    if (Date.now() - lastApiCallRef.current < 2000) {
+      showToast("Please wait before retrying", "danger");
       return;
     }
-    lastApiCallRef.current = now;
 
+    lastApiCallRef.current = Date.now();
     setIsSaving(true);
 
-    const result = profileSchema.safeParse(formData);
-    if (!result.success) {
-      showToastMessage(result.error.issues[0].message, "danger");
+    const parsed = profileSchema.safeParse(formData);
+    if (!parsed.success) {
+      showToast(parsed.error.issues[0].message, "danger");
       setIsSaving(false);
       return;
     }
 
     try {
-      if (!user.id) throw new Error("User ID not available");
-
       const res = await fetch(`/api/profile/${user.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to update profile.");
-      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
 
-      const updatedUser = await res.json();
-      if (update) await update({ user: updatedUser.user });
-      showToastMessage("Profile updated successfully!");
+      await update?.({ user: data.user });
       setShowEdit(false);
+      showToast("Profile updated");
     } catch (err: any) {
-      console.error("Error updating profile:", err);
-      showToastMessage(err.message || "Something went wrong.", "danger");
+      showToast(err.message, "danger");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!isOwnProfile) return;
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      showToastMessage("Please select an image file", "danger");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      showToastMessage("Image must be less than 5MB", "danger");
-      return;
-    }
-
-    setIsUploading(true);
-
-    try {
-      if (!user?.id) throw new Error("User ID not available");
-
-      const toBase64 = (file: File): Promise<string> =>
-        new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(file);
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = (error) => reject(error);
-        });
-
-      const base64Data = await toBase64(file);
-
-      const uploadRes = await fetch("/api/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data: base64Data }),
-      });
-
-      if (!uploadRes.ok) {
-        const err = await uploadRes.json();
-        throw new Error(err.error || "Upload failed");
-      }
-
-      const { url } = await uploadRes.json();
-
-      const updateRes = await fetch(`/api/profile/${user.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: url }),
-      });
-
-      if (!updateRes.ok) throw new Error("Failed to update profile image");
-
-      const updatedUser = await updateRes.json();
-      await update({ user: updatedUser.user });
-
-      setImagePreview(updatedUser.user.image);
-      showToastMessage("Profile image updated successfully!");
-    } catch (error: any) {
-      console.error("Error uploading image:", error);
-      showToastMessage(error.message || "Failed to upload image.", "danger");
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
-
-  const removeImage = async () => {
-    if (!isOwnProfile) return;
-    try {
-      if (!user?.id) throw new Error("User ID not available");
-
-      const response = await fetch(`/api/profile/${user.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: "" }),
-      });
-
-      if (!response.ok) throw new Error("Failed to remove profile image");
-
-      setImagePreview("");
-      showToastMessage("Profile image removed successfully!");
-    } catch (error: any) {
-      console.error("Error removing image:", error);
-      showToastMessage(error.message || "Failed to remove image.", "danger");
-    }
-  };
-
   const handleFollowClick = () => {
-    const now = Date.now();
-    if (now - lastFollowClick.current < 500) return; // cooldown 500ms
-    lastFollowClick.current = now;
+    if (Date.now() - lastFollowClick.current < 500) return;
+    lastFollowClick.current = Date.now();
     toggleFollow();
   };
 
+  // ================= UI =================
   return (
     <>
       <Card className={`${styles.profileCard} shadow-sm mb-4`}>
-       <Card.Body className="p-4">
-    {/* Avatar area */}
-    <div className={`d-flex flex-column align-items-center text-center mb-3 position-relative ${styles.header}`}>
-      <div className={styles.avatarWrap}>
-        <Image
-          src={imagePreview || "https://res.cloudinary.com/dlcrwtyd3/image/upload/v1757470463/3135715_niwuv2.png"}
-          alt={user.name || "User"}
-          width={120}
-          height={120}
-          className={`${styles.avatar} rounded-circle`}
-        />
+        <Card.Body className="p-4 text-center">
+          <Image
+            src={imagePreview || "/avatar.png"}
+            alt="Avatar"
+            width={120}
+            height={120}
+            className="rounded-circle"
+          />
 
-        {isOwnProfile && (
-          <>
-            <Button
-              variant="primary"
-              size="sm"
-              className={`${styles.uploadBtn} position-absolute`}
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
+          <h5 className="mt-3">{user.name}</h5>
+          <p className="text-muted">@{user.email?.split("@")[0]}</p>
+
+          <div className="d-flex justify-content-center gap-4 mt-3">
+            <button className="btn btn-link" onClick={() => setShowFollowersModal(true)}>
+              {followersCount ?? <Spinner size="sm" />} Followers
+            </button>
+            <button className="btn btn-link" onClick={() => setShowFollowingModal(true)}>
+              {followingCount ?? <Spinner size="sm" />} Following
+            </button>
+          </div>
+
+          {isOwnProfile ? (
+            <Button size="sm" onClick={() => setShowEdit(true)}>
+              Edit Profile
+            </Button>
+          ) : (
+            <OverlayTrigger
+              overlay={<Tooltip>{isFollowing ? "Unfollow" : "Follow"}</Tooltip>}
             >
-              {isUploading ? <Spinner size="sm" /> : <CloudUpload size={14} />}
-            </Button>
-
-            {user?.image && (
               <Button
-                variant="danger"
                 size="sm"
-                className={`${styles.removeBtn} position-absolute`}
-                onClick={removeImage}
-                disabled={isUploading}
+                variant={isFollowing ? "outline-danger" : "primary"}
+                disabled={loading}
+                onClick={handleFollowClick}
               >
-                <X size={12} />
+                {isFollowing ? "Unfollow" : "Follow"}
               </Button>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-
-    {/* Name & handle */}
-    <h2 className={`${styles.name} h5 mt-3 mb-1`}>{user?.name || "Guest User"}</h2>
-    <p className={`${styles.handle} text-muted mb-2`}>@{user?.email?.split("@")[0] || "guest"}</p>
-    {user?.bio && <p className={`${styles.bio} text-center fst-italic`}>{user.bio}</p>}
-
-    {/* Followers / Following counts (clickable) */}
-    <div className="d-flex justify-content-center gap-3 mt-3">
-      <button
-        type="button"
-        className={`btn btn-link text-decoration-none ${styles.countBtn}`}
-        onClick={() => setShowFollowersModal(true)}
-      >
-        <span className={`badge ${styles.countBadge}`}>
-          {followersCount !== null ? followersCount : <Spinner animation="border" size="sm" />}
-        </span>
-        <div className="small text-muted">Followers</div>
-      </button>
-
-      <button
-        type="button"
-        className={`btn btn-link text-decoration-none ${styles.countBtn}`}
-        onClick={() => setShowFollowingModal(true)}
-      >
-        <span className={`badge ${styles.countBadge}`}>
-          {followingCount !== null ? followingCount : <Spinner animation="border" size="sm" />}
-        </span>
-        <div className="small text-muted">Following</div>
-      </button>
-    </div>
-
-    {/* Edit or Follow button */}
-    <div className="d-flex justify-content-center mt-3">
-      {isOwnProfile ? (
-        <Button
-          variant="primary"
-          size="sm"
-          className={styles.editBtn}
-          onClick={() => setShowEdit(true)}
-          disabled={isSaving}
-        >
-          Edit Profile
-        </Button>
-      ) : (
-        <OverlayTrigger
-          placement="top"
-          overlay={<Tooltip>{isFollowing ? "Click to unfollow" : "Click to follow"}</Tooltip>}
-        >
-          <Button
-            className={`${styles.followBtn} ${isFollowing ? "btn-outline-danger" : "btn-primary"}`}
-            size="sm"
-            onClick={handleFollowClick}
-            disabled={loading}
-          >
-            {loading ? "..." : isFollowing ? "Unfollow" : "Follow"}
-          </Button>
-        </OverlayTrigger>
-      )}
-    </div>
-  </Card.Body>
-
-        {/* Edit Modal */}
-        <Modal show={showEdit} onHide={() => setShowEdit(false)} centered>
-          <Modal.Header closeButton>
-            <Modal.Title>Edit Profile</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <Form>
-              <Form.Group className="mb-3">
-                <Form.Label>Name</Form.Label>
-                <Form.Control name="name" value={formData.name} onChange={handleChange("name")} />
-              </Form.Group>
-              <Form.Group className="mb-3">
-                <Form.Label>Bio</Form.Label>
-                <Form.Control as="textarea" rows={3} name="bio" value={formData.bio} onChange={handleChange("bio")} />
-              </Form.Group>
-              <Form.Group className="mb-3">
-                <Form.Label>Location</Form.Label>
-                <Form.Control name="location" value={formData.location} onChange={handleChange("location")} />
-              </Form.Group>
-              <Form.Group>
-                <Form.Label>Website</Form.Label>
-                <Form.Control name="website" value={formData.website} onChange={handleChange("website")} />
-              </Form.Group>
-            </Form>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowEdit(false)}>
-              Cancel
-            </Button>
-            <Button variant="primary" onClick={handleSave} disabled={isSaving}>
-              {isSaving ? <Spinner size="sm" animation="border" /> : "Save"}
-            </Button>
-          </Modal.Footer>
-        </Modal>
-
-        <FollowersModal show={showFollowersModal} onHide={() => setShowFollowersModal(false)} list={followersList} title="Followers" />
-        <FollowersModal show={showFollowingModal} onHide={() => setShowFollowingModal(false)} list={followingList} title="Following" />
+            </OverlayTrigger>
+          )}
+        </Card.Body>
       </Card>
 
-      <ToastContainer position="top-end" className="p-3" style={{ zIndex: 1060 }}>
-        <Toast show={showToast} onClose={() => setShowToast(false)} delay={3000} autohide bg={toastVariant}>
-          <Toast.Header className={`bg-${toastVariant} text-white`}>
-            <strong className="me-auto">Notification</strong>
-          </Toast.Header>
-          <Toast.Body className="text-white">{toastMessage}</Toast.Body>
+      {/* Modals */}
+      <FollowersModal
+        show={showFollowersModal}
+        onHide={() => setShowFollowersModal(false)}
+        list={followersList}
+        title="Followers"
+      />
+      <FollowersModal
+        show={showFollowingModal}
+        onHide={() => setShowFollowingModal(false)}
+        list={followingList}
+        title="Following"
+      />
+
+      {/* Toast */}
+      <ToastContainer position="top-end">
+        <Toast
+          show={toast.show}
+          bg={toast.variant}
+          onClose={() => setToast((t) => ({ ...t, show: false }))}
+          delay={3000}
+          autohide
+        >
+          <Toast.Body className="text-white">{toast.message}</Toast.Body>
         </Toast>
       </ToastContainer>
+
+      {/* Edit Modal */}
+      <Modal show={showEdit} onHide={() => setShowEdit(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Edit Profile</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Control
+            className="mb-2"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          />
+        </Modal.Body>
+        <Modal.Footer>
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? <Spinner size="sm" /> : "Save"}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </>
-  );
-}
-
-// Followers / Following modal component
-export function FollowersModal({ show, onHide, list, title }: FollowersModalProps) {
-  return (
-    <Modal 
-      show={show} 
-      onHide={onHide} 
-      centered 
-      scrollable
-      contentClassName="rounded-4 border-0 shadow-lg"
-    >
-      <Modal.Header closeButton className="border-bottom-0 pb-0 px-4 pt-4">
-        <Modal.Title className="fw-bold fs-5 w-100 text-center">
-          {title}
-        </Modal.Title>
-      </Modal.Header>
-
-      <Modal.Body className="px-0 py-3" style={{ minHeight: "300px", maxHeight: "400px" }}>
-        {list.length === 0 ? (
-          <div className="text-center py-5">
-            <i className="bi bi-people text-muted opacity-25" style={{ fontSize: "3rem" }}></i>
-            <p className="text-muted mt-2">No {title.toLowerCase()} yet</p>
-          </div>
-        ) : (
-          <div className="list-group list-group-flush">
-            {list.map((f, index) => {
-              const u = f.user;
-              if (!u) return null;
-
-              return (
-                <div 
-                  key={u._id || index}
-                  className="list-group-item list-group-item-action border-0 px-4 py-2 d-flex align-items-center justify-content-between transition-all"
-                  style={{ cursor: 'pointer' }}
-                >
-                  <Link
-                    href={`/profile/${u.username}`}
-                    className="d-flex align-items-center text-decoration-none text-dark flex-grow-1"
-                    onClick={onHide}
-                  >
-                    <div className="position-relative me-3">
-                      <Image
-                        src={u.image || "https://res.cloudinary.com/dlcrwtyd3/image/upload/v1757470463/3135715_niwuv2.png"}
-                        alt={u.name || "User"}
-                        width={44}
-                        height={44}
-                        className="rounded-circle border object-fit-cover shadow-sm"
-                      />
-                    </div>
-                    <div className="d-flex flex-column">
-                      <span className="fw-bold mb-0 lh-sm text-truncate" style={{ maxWidth: '150px' }}>
-                        {u.name || "Unknown"}
-                      </span>
-                      <small className="text-muted">@{u.username || "user"}</small>
-                    </div>
-                  </Link>
-
-                  {/* Industry Standard: Quick Action Button */}
-                  <Button 
-                    variant="outline-primary" 
-                    size="sm" 
-                    className="rounded-pill px-3 fw-bold btn-sm-custom"
-                    style={{ fontSize: '0.8rem' }}
-                  >
-                    Follow
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </Modal.Body>
-    </Modal>
   );
 }

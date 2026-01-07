@@ -21,7 +21,7 @@ const NotificationSchema = new Schema<INotification>(
     message: { type: String },
     postId: { type: Schema.Types.ObjectId, ref: "Post" },
     read: { type: Boolean, default: false },
-    deleteAfterSeconds: { type: Number, default: 60 * 60 * 24 * 30 }, // default 30 days
+    deleteAfterSeconds: { type: Number, default: 60 * 60 * 24 * 10 }, // default 10 days
     
   },
   { timestamps: true }

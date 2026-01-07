@@ -28,7 +28,7 @@ export const GET = auth(async (req) => {
     const totalPosts = await Post.countDocuments(query);
 
     const postsRaw = await Post.find(query)
-      .populate("userId", "name image email")
+      .populate("userId", "username name image email")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)

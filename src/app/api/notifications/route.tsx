@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
       type,
       postId,
       read: false,
-      deleteAfterSeconds: deleteAfterSeconds || 60 * 60 * 24 * 30, // default 30 days
+      deleteAfterSeconds: deleteAfterSeconds || 60 * 60 * 24 * 10, // default 10 days
     });
 
     return NextResponse.json(newNotification, { status: 201 });
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
     if (!userId) return NextResponse.json({ notifications: [] }, { status: 200 });
 
     const notifications = await Notification.find({ user: userId })
-      .populate("sender", "name image")
+      .populate("sender", "username name image")
       .sort({ createdAt: -1 })
       .limit(limit);
 

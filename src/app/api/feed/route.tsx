@@ -1,3 +1,4 @@
+// src/app/api/feed/route.tsx
 import { NextRequest, NextResponse } from "next/server";
 import  {connectDB} from "@/lib/Connect";
 import { Follower } from "@/lib/models/Follower";

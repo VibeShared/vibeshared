@@ -101,7 +101,7 @@ export default function NotificationDropdown({ userId }: { userId?: string | nul
                   
                   // Redirect Logic Fix
                   if ((n.type === "like" || n.type === "comment") && n.postId) {
-                    window.location.href = `/post/${n.postId}`;
+                    window.location.href = `/post/${n.username}`;
                   } else if (n.type === "follow" && senderData) {
                     // Yahan username ya _id jo bhi aapka route accept karta ho use karein
                     window.location.href = `/profile/${senderData.username || senderData._id}`;
