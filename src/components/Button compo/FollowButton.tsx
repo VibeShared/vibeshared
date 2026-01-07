@@ -25,7 +25,7 @@ export default function FollowButton({
   );
 
   // safety: hide button if user is not logged in or self-profile
-  if (!session?.user?.id || session.user.id === targetUserId) return null;
+  if (!session?.user?.username || session.user.id === targetUserId) return null;
 
   return (
     <Button
