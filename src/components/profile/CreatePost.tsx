@@ -17,12 +17,8 @@ import { useSession } from "next-auth/react";
 import { z } from "zod";
 
 export const CreatePostSchema = z.object({
-  content: z
-    .string()
-    .max(1000, "Content must be less than 1000 characters")
-    .optional(),
-  media: z.string().optional(),
-  mediaType: z.enum(["image", "video"]).optional(),
+  content: z.string().max(1000).optional(),
+  mediaUrl: z.string().url().optional(),
 });
 
 interface CreatePostProps {
@@ -52,95 +48,66 @@ export default function CreatePost({
   const { data: session } = useSession();
 
   const handleSubmit = async () => {
-    setError("");
-    setValidationErrors({});
+  setError("");
+  setValidationErrors({});
+  setIsUploading(true);
 
-    // Client-side validation with Zod
-    try {
-      CreatePostSchema.parse({
-        content: postContent,
-        media: media ? "exists" : undefined,
-        mediaType: media?.type,
-      });
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        const errors: Record<string, string> = {};
-        err.issues.forEach((issue) => {
-          if (issue.path[0]) {
-            errors[issue.path[0] as string] = issue.message;
-          }
-        });
-        setValidationErrors(errors);
-        return;
-      }
-    }
+  try {
+    let mediaUrl: string | undefined;
+    let cloudinary_id: string | undefined;
 
-    if (!postContent.trim() && !media) {
-      setError("Please add some content or media to your post");
-      return;
-    }
+    // STEP 1: Upload media (if exists)
+    if (media) {
+      const formData = new FormData();
+      formData.append("file", media.file);
 
-    setIsUploading(true);
-
-    try {
-      let mediaBase64 = "";
-      let mediaType: "image" | "video" | undefined;
-
-      if (media) {
-        mediaType = media.type;
-        mediaBase64 = await convertToBase64(media.file);
-      }
-
-      const response = await fetch("/api/post", {
+      const uploadRes = await fetch("/api/upload", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          content: postContent,
-          media: mediaBase64,
-          mediaType,
-        }),
+        body: formData,
       });
 
-      const data = await response.json();
+      const uploadData = await uploadRes.json();
 
-      if (!response.ok) {
-        if (Array.isArray(data.details)) {
-          // ✅ Transform Zod issues array into key-value object
-          const serverErrors: Record<string, string> = {};
-          data.details.forEach((issue: any) => {
-            const field = issue.path?.[0] || "general";
-            serverErrors[field] = issue.message;
-          });
-          setValidationErrors(serverErrors);
-        } else {
-          setError(data.error || "Failed to create post");
-        }
-        return;
+      if (!uploadRes.ok) {
+        throw new Error(uploadData.error || "Media upload failed");
       }
 
-      // Reset form
-      setPostContent("");
-      setMedia(null);
-      setShowModal(false);
-      onPostCreate?.();
-    } catch (err) {
-      console.error("Error creating post:", err);
-      setError("Failed to create post. Please try again.");
-    } finally {
-      setIsUploading(false);
+      mediaUrl = uploadData.url;
+      cloudinary_id = uploadData.publicId;
     }
-  };
 
-  const convertToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = (error) => reject(error);
+    // STEP 2: Create post
+    const postRes = await fetch("/api/post", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        content: postContent,
+        mediaUrl,
+        cloudinary_id,
+      }),
     });
-  };
+
+    const postData = await postRes.json();
+
+    if (!postRes.ok) {
+      throw new Error(postData.error || "Failed to create post");
+    }
+
+    // RESET STATE
+    setPostContent("");
+    setMedia(null);
+    setShowModal(false);
+    onPostCreate?.();
+  } catch (err: any) {
+    console.error("Create post error:", err);
+    setError(err.message || "Something went wrong");
+  } finally {
+    setIsUploading(false);
+  }
+};
+
 
   const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

@@ -249,7 +249,7 @@ export default function PostCard({
         </div>
       ) : (
         <img
-          src={post.mediaUrl}
+          src={post.mediaUrl || null}
           alt="Post media"
           className="img-fluid w-100 rounded mb-2"
           style={{ objectFit: "cover", maxWidth: "468px" }}

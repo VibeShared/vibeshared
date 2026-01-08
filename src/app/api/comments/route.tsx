@@ -7,7 +7,10 @@ import { pusherServer } from "@/lib/pusher";
 import { Notification as NotificationModel } from "@/lib/models/Notification";
 import { Wallet } from "@/lib/models/Wallet";
 import Post from "@/lib/models/Post";
-import  "@/lib/models/User";
+import { isFollower } from "@/lib/helpers/isFollower";
+import { isBlocked } from "@/lib/helpers/isBlocked";
+import User from "@/lib/models/User";
+
 
 
 // Interfaces
@@ -41,91 +44,173 @@ interface DeleteCommentPayload {
   commentId: string;
 }
 
+
+
+
 // POST - Create a new comment
 export async function POST(request: NextRequest) {
-  let session;
+  let session: mongoose.ClientSession | null = null;
+
   try {
     await connectDB();
+
     session = await mongoose.startSession();
     session.startTransaction();
 
-    const { userId, postId, text, parentId, tipAmount = 0 } = await request.json();
+    const {
+      userId,
+      postId,
+      text,
+      parentId,
+      tipAmount = 0,
+    } = await request.json();
 
-    // ✅ Validation
+    /* ---------- Basic Validation ---------- */
     if (!userId || !postId || !text) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-    }
-    if (text.trim().length === 0 || text.length > 1000) {
-      return NextResponse.json({ error: "Comment must be 1-1000 characters" }, { status: 400 });
-    }
-    if (tipAmount < 0 || tipAmount > 10000) {
-      return NextResponse.json({ error: "Invalid tip amount" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
     }
 
+    if (text.trim().length === 0 || text.length > 1000) {
+      return NextResponse.json(
+        { error: "Comment must be 1–1000 characters" },
+        { status: 400 }
+      );
+    }
+
+    if (tipAmount < 0 || tipAmount > 10000) {
+      return NextResponse.json(
+        { error: "Invalid tip amount" },
+        { status: 400 }
+      );
+    }
+
+    /* ---------- Fetch Post ---------- */
     const post = await Post.findById(postId).session(session);
     if (!post) {
-      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Post not found" },
+        { status: 404 }
+      );
     }
 
-    // ✅ Create comment
-    const comment = await Comment.create([{
-      userId: new Types.ObjectId(userId),
-      postId: new Types.ObjectId(postId),
-      parentId: parentId ? new Types.ObjectId(parentId) : null,
-      text: text.trim(),
-      tipAmount,
-      isHighlighted: tipAmount > 0,
-    }], { session });
+    const commenterId = userId.toString();
+    const postOwnerId = post.userId.toString();
 
-    // ✅ Handle tip
+    /* ---------- Block Check (GLOBAL) ---------- */
+    if (await isBlocked(commenterId, postOwnerId)) {
+      return NextResponse.json(
+        { error: "You cannot comment on this post" },
+        { status: 403 }
+      );
+    }
+
+    /* ---------- Fetch Post Owner Settings ---------- */
+    const postOwner = await User.findById(post.userId)
+      .select("commentPermission notificationComments")
+      .lean();
+
+    if (!postOwner) {
+      return NextResponse.json(
+        { error: "Post owner not found" },
+        { status: 404 }
+      );
+    }
+
+    /* ---------- Comment Permission Check ---------- */
+    if (
+      postOwner.commentPermission === "followers" &&
+      !(await isFollower(commenterId, postOwnerId))
+    ) {
+      return NextResponse.json(
+        { error: "Only followers can comment" },
+        { status: 403 }
+      );
+    }
+
+    /* ---------- Create Comment ---------- */
+    const [comment] = await Comment.create(
+      [
+        {
+          userId: new Types.ObjectId(commenterId),
+          postId: new Types.ObjectId(postId),
+          parentId: parentId ? new Types.ObjectId(parentId) : null,
+          text: text.trim(),
+          tipAmount,
+          isHighlighted: tipAmount > 0,
+        },
+      ],
+      { session }
+    );
+
+    /* ---------- Handle Tip (Wallet) ---------- */
     let updatedWallet = null;
+
     if (tipAmount > 0) {
-      const platformFee = tipAmount * 0.30;
+      const platformFee = tipAmount * 0.3;
       const creatorAmount = tipAmount - platformFee;
 
       updatedWallet = await Wallet.findOneAndUpdate(
         { userId: post.userId },
-        { 
-          $inc: { balance: creatorAmount, totalEarned: creatorAmount },
+        {
+          $inc: {
+            balance: creatorAmount,
+            totalEarned: creatorAmount,
+          },
           $push: {
             transactions: {
               type: "credit",
               amount: creatorAmount,
               status: "completed",
-              createdAt: new Date()
-            }
-          }
+              createdAt: new Date(),
+            },
+          },
         },
         { upsert: true, new: true, session }
       );
 
-      if (!updatedWallet) throw new Error("Failed to update creator wallet");
+      if (!updatedWallet) {
+        throw new Error("Failed to update creator wallet");
+      }
     }
 
-    // ✅ Notification (skip if self-comment)
-    if (post.userId.toString() !== userId) {
-      await NotificationModel.create([{
-        user: post.userId,
-        sender: userId,
-        type: tipAmount > 0 ? "tip" : "comment",
-        postId: post._id,
-        read: false,
-        message: tipAmount > 0 ? `You received ₹${tipAmount} tip!` : undefined,
-      }], { session });
+    /* ---------- Notification (Respect Settings + Block) ---------- */
+    if (
+      commenterId !== postOwnerId &&
+      postOwner.notificationComments !== false &&
+      !(await isBlocked(commenterId, postOwnerId))
+    ) {
+      await NotificationModel.create(
+        [
+          {
+            user: post.userId,
+            sender: commenterId,
+            type: tipAmount > 0 ? "tip" : "comment",
+            postId: post._id,
+            read: false,
+            message:
+              tipAmount > 0 ? `You received ₹${tipAmount} tip!` : undefined,
+          },
+        ],
+        { session }
+      );
     }
 
-    // ✅ Commit transaction
+    /* ---------- Commit Transaction ---------- */
     await session.commitTransaction();
 
-    // ✅ Populate comment for response
-    const populatedComment = await Comment.findById(comment[0]._id)
+    /* ---------- Populate Comment for Response ---------- */
+    const populatedComment = await Comment.findById(comment._id)
       .populate("userId", "name image")
       .lean();
 
-    // ✅ Trigger Pusher
+    /* ---------- Trigger Realtime Update ---------- */
+    // ⚠️ Do NOT include pusher in transaction
     await pusherServer.trigger(`comments-${postId}`, "new-comment", {
       comment: populatedComment,
-      wallet: updatedWallet ? updatedWallet.toObject() : null, // optional for frontend
+      wallet: updatedWallet ? updatedWallet.toObject() : null,
     });
 
     return NextResponse.json(populatedComment, { status: 201 });
@@ -133,8 +218,12 @@ export async function POST(request: NextRequest) {
     if (session && session.inTransaction()) {
       await session.abortTransaction();
     }
-    console.error("Create Comment error:", error);
-    return NextResponse.json({ error: "Failed to create comment" }, { status: 500 });
+
+    console.error("CREATE_COMMENT_ERROR:", error);
+    return NextResponse.json(
+      { error: "Failed to create comment" },
+      { status: 500 }
+    );
   } finally {
     if (session) session.endSession();
   }
@@ -161,6 +250,11 @@ export async function GET(request: NextRequest) {
       .populate("userId", "name image")
       .sort({ createdAt: -1 })
       .lean();
+
+      const filtered = allComments.filter(
+  async c => !await isBlocked(postId, c.userId._id.toString())
+);
+      
 
     // Build nested structure
     const map = new Map<string, any>();

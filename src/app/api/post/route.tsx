@@ -118,6 +118,8 @@ export const POST = auth(async (req: any) => {
       likesCount: 0,
     });
 
+    
+
     return NextResponse.json({
       message: "Post created successfully",
       post,

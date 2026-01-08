@@ -40,11 +40,12 @@ export function FollowersModal({
                 <Link href={`/profile/${u.username}`} onClick={onHide}>
                   <div className="d-flex align-items-center gap-2">
                     <Image
+                    
                       src={u.image || "/avatar.png"}
                       width={40}
                       height={40}
                       className="rounded-circle"
-                      alt={u.name}
+                      alt={u.name || "User Avatar"}
                     />
                     <div>
                       <div className="fw-bold">{u.name}</div>

@@ -19,6 +19,11 @@ export interface IUser extends Document {
   isVerified?: boolean;
   role?: "user" | "admin";
   status?: "active" | "suspended" | "deleted";
+  commentPermission?: "everyone" | "followers";
+  lastUsernameChange?: Date
+  notificationLikes?: boolean;
+  notificationComments?: boolean;
+  notificationFollows?: boolean;
 }
 
 const UserSchema = new Schema<IUser>({
@@ -39,6 +44,7 @@ const UserSchema = new Schema<IUser>({
     minlength: 3,
     maxlength: 30,
   },
+  lastUsernameChange: { type: Date },
 
   isPrivate: {
     type: Boolean,
@@ -49,6 +55,29 @@ const UserSchema = new Schema<IUser>({
     type: Boolean,
     default: false,
   },
+  commentPermission: {
+    type: String,
+    enum: ["everyone", "followers"],
+    default: "everyone",
+  },
+
+
+
+  notificationLikes: {
+    type: Boolean,
+    default: true,
+  },
+
+  notificationComments: {
+    type: Boolean,
+    default: true,
+  },
+
+  notificationFollows: {
+    type: Boolean,
+    default: true,
+  },
+  
 
   role: {
     type: String,

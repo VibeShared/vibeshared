@@ -1,4 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+// app/api/upload/route.ts
+export const runtime = "nodejs";
+
+import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { connectDB } from "@/lib/Connect";
 import User from "@/lib/models/User";
@@ -7,47 +10,55 @@ import cloudinary from "@/lib/cloudinary";
 export const POST = auth(async (req: any) => {
   try {
     const session = req.auth;
-    if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    // 1. Parse FormData
     const formData = await req.formData();
-    const file = formData.get("file") as File;
+    const file = formData.get("file");
 
-    if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    if (!(file instanceof File)) {
+      return NextResponse.json({ error: "Invalid file" }, { status: 400 });
+    }
 
-    // 2. Validate User & DB
+    if (!file.type.startsWith("image/")) {
+      return NextResponse.json({ error: "Only images allowed" }, { status: 400 });
+    }
+
+    if (file.size === 0) {
+      return NextResponse.json({ error: "Empty file" }, { status: 400 });
+    }
+
     await connectDB();
     const user = await User.findById(session.user.id).select("username status");
     if (!user || user.status !== "active") {
-        return NextResponse.json({ error: "User restricted or not found" }, { status: 403 });
+      return NextResponse.json({ error: "User restricted" }, { status: 403 });
     }
 
-    // 3. Convert File to Buffer for Cloudinary
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const buffer = Buffer.from(await file.arrayBuffer());
 
-    // 4. Upload to Cloudinary using a Promise (Modern approach)
-    const uploadResponse: any = await new Promise((resolve, reject) => {
-      cloudinary.uploader.upload_stream(
-        {
-          folder: `vibe_app/users/${user.username}/posts`,
-          resource_type: "image",
-          transformation: [{ width: 1080, quality: "auto" }],
-        },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        }
-      ).end(buffer);
+    const result: any = await new Promise((resolve, reject) => {
+      cloudinary.uploader
+        .upload_stream(
+          {
+            folder: `vibe_app/users/${user.username}/posts`,
+            resource_type: "image",
+            transformation: [{ width: 1080, quality: "auto" }],
+          },
+          (err, res) => {
+            if (err) reject(err);
+            else resolve(res);
+          }
+        )
+        .end(buffer);
     });
 
     return NextResponse.json({
-      url: uploadResponse.secure_url,
-      publicId: uploadResponse.public_id,
+      url: result.secure_url,
+      publicId: result.public_id,
     });
-
   } catch (error) {
-    console.error("Upload Error:", error);
+    console.error("Cloudinary Upload Error:", error);
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 }) as any;

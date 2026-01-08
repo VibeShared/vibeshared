@@ -67,6 +67,8 @@ export async function POST(req: NextRequest): Promise<NextResponse<IProfile | Er
       );
     }
 
+    
+
     const profile = await Profile.findOneAndUpdate(
       { userId: new Types.ObjectId(userId) },
       { 
