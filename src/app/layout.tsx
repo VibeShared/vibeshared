@@ -10,7 +10,7 @@ import GlobalMessages from "@/components/GlobalMessage";
 import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "react-hot-toast";
 import { auth } from "@/lib/auth"; 
-
+import QueryProvider from "@/components/providers/QueryProvider";
 
 
 export const metadata: Metadata = {
@@ -64,6 +64,7 @@ export default async function RootLayout({
         <GlobalMessages />
         
         {/* ✅ Passing the session here hydrates the client-side useSession() hook instantly */}
+        <QueryProvider>
         <SessionProvider session={session}
         refetchInterval={60}
           refetchOnWindowFocus={false}
@@ -71,7 +72,7 @@ export default async function RootLayout({
           <Header user={session?.user || null} />
           <Container>{children}</Container>
         </SessionProvider>
-
+        </QueryProvider>
         <Analytics />
       </body>
     </html>

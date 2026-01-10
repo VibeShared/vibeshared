@@ -116,23 +116,28 @@ export async function GET(req: NextRequest) {
       .limit(limit)
       .lean();
 
+    const filtered = [];
 
-      const filtered = [];
-for (const n of notifications) {
-  if (!(await isBlocked(userId, n.sender._id.toString()))) {
-    filtered.push(n);
-  }
-}
+    for (const n of notifications) {
+      if (!n.sender || !n.sender._id) continue;
+
+      const blocked = await isBlocked(
+        userId,
+        n.sender._id.toString()
+      );
+
+      if (!blocked) {
+        filtered.push(n);
+      }
+    }
 
     return NextResponse.json({ notifications: filtered }, { status: 200 });
   } catch (err) {
     console.error("FETCH_NOTIFICATIONS_ERROR:", err);
-    return NextResponse.json(
-      { notifications: [] },
-      { status: 500 }
-    );
+    return NextResponse.json({ notifications: [] }, { status: 500 });
   }
 }
+
 
 /* ======================================================
    PATCH → Mark notification(s) as read

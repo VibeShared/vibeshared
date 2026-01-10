@@ -14,6 +14,7 @@ export default function AuthButton() {
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
+
   // ✅ Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

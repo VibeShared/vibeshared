@@ -108,60 +108,73 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
 
   callbacks: {
-    async signIn({ user, account }) {
-      if (account?.provider !== "credentials") {
-        if (!user.email) return false;
+  async signIn({ user, account }) {
+    if (account?.provider !== "credentials") {
+      if (!user.email) return false;
 
-        await connectDB();
-        let dbUser = await User.findOne({ email: user.email });
+      await connectDB();
+      let dbUser = await User.findOne({ email: user.email });
 
-        if (!dbUser) {
-          const baseUsername =
-            user.name?.split(" ")[0] || user.email.split("@")[0];
+      if (!dbUser) {
+        const baseUsername =
+          user.name?.split(" ")[0] || user.email.split("@")[0];
 
-          const newUser = await User.create({
-            name: user.name || baseUsername,
-            email: user.email,
-            username: baseUsername.toLowerCase(),
-            image: user.image,
-            isVerified: true,
-            role: "user",
-            status: "active",
-          });
+        const newUser = await User.create({
+          name: user.name || baseUsername,
+          email: user.email,
+          username: baseUsername.toLowerCase(),
+          image: user.image,
+          isVerified: true,
+          role: "user",
+          status: "active",
+        });
 
-          user.id = newUser._id.toString();
-          user.username = newUser.username;
-          user.role = newUser.role;
-        } else {
-          if (dbUser.status !== "active") return false;
-          user.id = dbUser._id.toString();
-          user.username = dbUser.username;
-          user.role = dbUser.role;
-        }
+        user.id = newUser._id.toString();
+        user.username = newUser.username;
+        user.role = newUser.role;
+      } else {
+        if (dbUser.status !== "active") return false;
+        user.id = dbUser._id.toString();
+        user.username = dbUser.username;
+        user.role = dbUser.role;
       }
-      return true;
-    },
-
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.username = user.username;
-        token.role = user.role;
-        token.isPrivate = user.isPrivate;
-        token.isVerified = user.isVerified;
-      }
-      return token;
-    },
-
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.username = token.username as string;
-        session.user.role = token.role as string;
-        session.user.isPrivate = token.isPrivate as boolean;
-        session.user.isVerified = token.isVerified as boolean;
-      }
-      return session;
-    },
+    }
+    return true;
   },
+
+  async jwt({ token, user, trigger, session }) {
+    // Initial sign-in
+    if (user) {
+      token.id = user.id;
+      token.name = user.name;
+      token.image = user.image;
+      token.username = user.username;
+      token.role = user.role;
+      token.isPrivate = user.isPrivate;
+      token.isVerified = user.isVerified;
+    }
+
+    // 🔑 Manual session update (profile update)
+    if (trigger === "update" && session?.user) {
+      token.name = session.user.name;
+      token.image = session.user.image;
+      token.username = session.user.username;
+    }
+
+    return token; // ✅ REQUIRED
+  },
+
+  async session({ session, token }) {
+    if (session.user) {
+      session.user.id = token.id as string;
+      session.user.name = token.name as string;
+      session.user.image = token.image as string;
+      session.user.username = token.username as string;
+      session.user.role = token.role as string;
+      session.user.isPrivate = token.isPrivate as boolean;
+      session.user.isVerified = token.isVerified as boolean;
+    }
+    return session;
+  },
+},
 });

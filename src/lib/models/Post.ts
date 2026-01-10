@@ -31,4 +31,5 @@ const PostSchema = new mongoose.Schema<IPost>(
   }
 );
 
+PostSchema.index({ userId: 1 });
 export default mongoose.models.Post || mongoose.model<IPost>("Post", PostSchema);
