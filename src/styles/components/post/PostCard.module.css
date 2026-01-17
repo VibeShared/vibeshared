@@ -1,0 +1,27 @@
+.postVideo {
+  padding-top: 175%; /* mobile default (taller) */
+  position: relative;
+}
+
+/* Tablet -> Instagram-like aspect ratio (4:5) */
+@media (min-width: 768px) {
+  .postVideo {
+    padding-top: 120%; /* 4:5 ratio */
+     max-width: 350px;
+  }
+}
+
+/* Desktop -> can be even shorter or centered */
+@media (min-width: 1200px) {
+  .postVideo {
+    padding-top: 125%; /* optional: slightly shorter */
+    max-width: 340px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+
+  .card{
+    max-width: 468px;
+  }

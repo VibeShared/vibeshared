@@ -1,0 +1,64 @@
+.likeContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.likeButton {
+  width: 50px;
+  height: 50px;
+  border: 2px solid #dee2e6;
+  border-radius: 50%;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 0;
+}
+
+.likeButton.liked {
+  border-color: #ff6b9d;
+  background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+}
+
+.heartIcon {
+  font-size: 1.2rem;
+  position: relative;
+  z-index: 2;
+}
+
+.likeCount {
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+/* Pulse ring base styles */
+.pulseRing {
+  position: absolute;
+  border: 2px solid #ff6b9d;
+  border-radius: 50%;
+  z-index: 1;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .likeButton {
+    width: 44px;
+    height: 44px;
+  }
+  
+  .heartIcon {
+    font-size: 1.1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heartIcon,
+  .pulseRing {
+    transition: none !important;
+    animation: none !important;
+  }
+}

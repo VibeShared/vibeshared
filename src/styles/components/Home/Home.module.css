@@ -1,0 +1,257 @@
+/* src/styles/componenet/Home/Home.module.css */
+
+.homepage {
+  overflow-x: hidden;
+}
+
+/* Hero Section */
+.heroSection {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 4rem 0;
+  color: white;
+}
+
+.minVh80 {
+  min-height: 80vh;
+}
+
+.heroTitle {
+  font-size: 3.5rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: white;
+}
+
+.heroSubtitle {
+  font-size: 1.5rem;
+  margin-bottom: 2.5rem;
+  opacity: 0.9;
+  color: white;
+}
+
+.primaryButton {
+  display: inline-block;
+  padding: 0.75rem 2rem;
+  background-color: #0d6efd;
+  color: white;
+  border-radius: 50px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border: none;
+}
+
+.primaryButton:hover {
+  background-color: #0b5ed7;
+  transform: translateY(-2px);
+  color: white;
+}
+
+.secondaryButton {
+  display: inline-block;
+  padding: 0.75rem 2rem;
+  background-color: transparent;
+  color: white;
+  border: 2px solid white;
+  border-radius: 50px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.secondaryButton:hover {
+  background-color: white;
+  color: #667eea;
+  transform: translateY(-2px);
+}
+
+.heroIllustration {
+  position: relative;
+  height: 400px;
+}
+
+.floatingCard {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  padding: 0.5rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  width: 240px;
+}
+
+.card1 {
+  top: 20%;
+  left: 0;
+  animation: float 6s ease-in-out infinite;
+}
+
+.card2 {
+  top: 50%;
+  right: 0;
+  animation: float 6s ease-in-out infinite 2s;
+}
+
+.card3 {
+  bottom: 20%;
+  left: 20%;
+  animation: float 6s ease-in-out infinite 4s;
+}
+
+.avatarSm {
+  width: 36px;
+  height: 36px;
+}
+
+.emoji {
+  animation: pulse 2s infinite;
+}
+
+/* How It Works Section */
+.section {
+  padding: 5rem 0;
+}
+
+.sectionTitle {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.sectionSubtitle {
+  font-size: 1.25rem;
+  margin-bottom: 3rem;
+  text-align: center;
+  color: #6c757d;
+}
+
+.card {
+  border: none;
+  border-radius: 16px;
+  transition: all 0.3s ease;
+  height: 100%;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.stepIcon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+}
+
+/* Why Choose Us Section */
+.bgLight {
+  background-color: #f8f9fa !important;
+}
+
+.featureIcon {
+  font-size: 2.5rem;
+  margin-right: 1.5rem;
+  color: #0d6efd;
+}
+
+.featureTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.featureText {
+  color: #6c757d;
+}
+
+/* Showcase Section */
+.postCard {
+  border: none;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  height: 100%;
+}
+
+.postCard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.postFooter {
+  background-color: transparent;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Social Proof Section */
+.socialProof {
+  background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);
+  color: white;
+  padding: 5rem 0;
+}
+
+.statNumber {
+  font-size: 3.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+/* Final CTA Section */
+.finalCta {
+  padding: 5rem 0;
+  background-color: #f8f9fa;
+}
+
+.ctaTitle {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+
+.ctaSubtitle {
+  font-size: 1.25rem;
+  margin-bottom: 3rem;
+  color: #6c757d;
+}
+
+.ctaButton {
+  padding: 1rem 3rem;
+  font-size: 1.25rem;
+  border-radius: 50px;
+}
+
+/* Animations */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-15px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .heroTitle {
+    font-size: 2.5rem;
+  }
+  
+  .heroSubtitle {
+    font-size: 1.25rem;
+  }
+  
+  .sectionTitle {
+    font-size: 2rem;
+  }
+  
+  .statNumber {
+    font-size: 2.5rem;
+  }
+}
