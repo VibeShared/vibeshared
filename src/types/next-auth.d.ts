@@ -1,4 +1,15 @@
 import { DefaultSession } from "next-auth";
+import { Session } from "next-auth";
+import { NextRequest } from "next/server";
+
+
+
+
+declare module "next/server" {
+  interface NextRequest {
+    auth?: Session | null;
+  }
+}
 
 declare module "next-auth" {
   interface User {

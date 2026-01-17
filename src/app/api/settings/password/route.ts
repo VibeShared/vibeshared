@@ -1,5 +1,4 @@
-import { NextResponse } from "next/server";
-import { NextAuthRequest } from "next-auth";
+import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db/connect";
 import User from "@/lib/models/User";
 import { auth } from "@/lib/auth";
@@ -13,13 +12,17 @@ const PasswordSchema = z.object({
 });
 
 /* ---------------- PATCH ---------------- */
-export const PATCH = auth(async (req: NextAuthRequest) => {
-  try {
-    const session = req.auth;
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export async function PATCH(req: NextRequest) {
+  const session = await auth();
 
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
+  try {
     const body = await req.json();
     const parsed = PasswordSchema.safeParse(body);
 
@@ -70,8 +73,6 @@ export const PATCH = auth(async (req: NextAuthRequest) => {
     const hashed = await bcrypt.hash(parsed.data.newPassword, 12);
 
     user.password = hashed;
-
-    // Optional: invalidate refresh tokens
     user.refreshToken = undefined;
     user.refreshTokenExpiresAt = undefined;
 
@@ -87,4 +88,4 @@ export const PATCH = auth(async (req: NextAuthRequest) => {
       { status: 500 }
     );
   }
-});
+}

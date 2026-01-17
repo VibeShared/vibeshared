@@ -1,15 +1,18 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db/connect";
 import { Follower } from "@/lib/models/Follower";
 import { auth } from "@/lib/auth";
 
-export const GET = auth(async (req) => {
-  await connectDB();
+export async function GET(req: NextRequest) {
+  const session = await auth();
 
-  const userId = req.auth?.user?.id;
-  if (!userId) {
+  if (!session?.user?.id) {
     return NextResponse.json({ requests: [] });
   }
+
+  await connectDB();
+
+  const userId = session.user.id;
 
   const requests = await Follower.find({
     following: userId,
@@ -20,4 +23,4 @@ export const GET = auth(async (req) => {
     .lean();
 
   return NextResponse.json({ requests });
-});
+}

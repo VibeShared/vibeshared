@@ -1,23 +1,30 @@
 // src/app/api/post/from/[postId]/route.ts
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { connectDB } from "@/lib/db/connect";
 import Post from "@/lib/models/Post";
 import { canViewFullProfile } from "@/lib/helpers/privacyGuard";
 import BlockedUser from "@/lib/models/BlockedUser";
 
-
-export const GET = auth(async (req, ctx) => {
+export async function GET(
+  req: NextRequest,
+  context: { params: Promise<{ postId: string }> }
+) {
   try {
+    const session = await auth();
+    const viewerId = session?.user?.id || null;
+
     await connectDB();
 
-    const { postId } = await ctx.params;
-    if (!postId) {
-      return NextResponse.json({ error: "Post ID missing" }, { status: 400 });
-    }
+    const { postId } = await context.params;
 
-    const viewerId = req.auth?.user?.id || null;
+    if (!postId) {
+      return NextResponse.json(
+        { error: "Post ID missing" },
+        { status: 400 }
+      );
+    }
 
     /* --------------------------------
        1️⃣ Fetch base post
@@ -33,7 +40,7 @@ export const GET = auth(async (req, ctx) => {
     const ownerId = basePost.userId.toString();
 
     /* --------------------------------
-       2️⃣ OWNER BYPASS (ONLY SAFE CASE)
+       2️⃣ OWNER BYPASS
     -------------------------------- */
     if (viewerId && viewerId === ownerId) {
       const posts = await Post.find({
@@ -48,7 +55,7 @@ export const GET = auth(async (req, ctx) => {
     }
 
     /* --------------------------------
-       3️⃣ HARD BLOCK CHECK (CRITICAL)
+       3️⃣ HARD BLOCK CHECK
     -------------------------------- */
     if (viewerId) {
       const blocked = await BlockedUser.exists({
@@ -96,5 +103,4 @@ export const GET = auth(async (req, ctx) => {
       { status: 500 }
     );
   }
-}) as any;
-
+}

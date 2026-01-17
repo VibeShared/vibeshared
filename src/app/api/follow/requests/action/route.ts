@@ -1,18 +1,22 @@
-import {  NextResponse } from "next/server";
-import { NextAuthRequest } from "next-auth";
+import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db/connect";
 import { Follower } from "@/lib/models/Follower";
 import { Notification } from "@/lib/models/Notification";
 import { auth } from "@/lib/auth";
 
-export const POST = auth(async (req: NextAuthRequest) => {
-  await connectDB();
+export async function POST(req: NextRequest) {
+  const session = await auth();
 
-  const userId = req.auth?.user?.id;
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
   }
 
+  await connectDB();
+
+  const userId = session.user.id;
   const { followerId, action } = await req.json();
   // action: "accept" | "reject"
 
@@ -23,7 +27,10 @@ export const POST = auth(async (req: NextAuthRequest) => {
   });
 
   if (!record) {
-    return NextResponse.json({ error: "Request not found" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Request not found" },
+      { status: 404 }
+    );
   }
 
   if (action === "accept") {
@@ -41,4 +48,4 @@ export const POST = auth(async (req: NextAuthRequest) => {
   }
 
   return NextResponse.json({ success: true });
-});
+}

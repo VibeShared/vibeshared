@@ -1,27 +1,24 @@
-// src/app/api/post/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db/connect";
-import Post, { IPost } from "@/lib/models/Post";
-import { Comment, IComment } from "@/lib/models/Comment";
+import Post from "@/lib/models/Post";
+import { Comment } from "@/lib/models/Comment";
 import { Like } from "@/lib/models/Likes";
 import User from "@/lib/models/User";
 import { Follower } from "@/lib/models/Follower";
 import { auth } from "@/lib/auth";
 import { canViewFullProfile } from "@/lib/helpers/privacyGuard";
 import mongoose from "mongoose";
-import  BlockedUser  from "@/lib/models/BlockedUser";
+import BlockedUser from "@/lib/models/BlockedUser";
 
-/**
- * GET POSTS
- * Supports:
- * 1) Page-based feed (page, limit)
- * 2) Cursor-based feed (startPostId)
- */
-export const GET = auth(async (req) => {
+/* ============================================================
+   GET → Fetch Posts
+============================================================ */
+export async function GET(req: NextRequest) {
   try {
-    await connectDB();
+    const session = await auth();
+    const viewerId = session?.user?.id || null;
 
-    const viewerId = req.auth?.user?.id || null;
+    await connectDB();
 
     const { searchParams } = new URL(req.url);
     const startPostId = searchParams.get("startPostId");
@@ -34,7 +31,7 @@ export const GET = auth(async (req) => {
     let query: Record<string, any> = {};
 
     /* =====================================================
-       STEP 1 — Fetch ALL blocked users (ONCE)
+       STEP 1 — Blocked users
     ===================================================== */
     const blockedUserIds = new Set<string>();
 
@@ -59,46 +56,35 @@ export const GET = auth(async (req) => {
     if (startPostId) {
       const cursorPost = await Post.findById(startPostId).select("createdAt");
       if (!cursorPost) {
-        return NextResponse.json({ error: "Start post not found" }, { status: 404 });
+        return NextResponse.json(
+          { error: "Start post not found" },
+          { status: 404 }
+        );
       }
       query.createdAt = { $lte: cursorPost.createdAt };
     }
 
     /* =====================================================
-       STEP 3 — User-specific posts (?userId=)
+       STEP 3 — User-specific feed
     ===================================================== */
     if (userId) {
-      // ❌ blocked profile → empty
       if (blockedUserIds.has(userId)) {
-        return NextResponse.json({
-          posts: [],
-          hasMore: false,
-          page: isCursorMode ? null : page,
-          total: 0,
-          limit,
-        });
+        return NextResponse.json({ posts: [], hasMore: false });
       }
 
       const allowed = await canViewFullProfile(viewerId, userId);
       if (!allowed) {
-        return NextResponse.json({
-          posts: [],
-          hasMore: false,
-          page: isCursorMode ? null : page,
-          total: 0,
-          limit,
-        });
+        return NextResponse.json({ posts: [], hasMore: false });
       }
 
       query.userId = userId;
     }
 
     /* =====================================================
-       STEP 4 — GLOBAL FEED (NO userId param)
+       STEP 4 — Global feed
     ===================================================== */
     if (!userId) {
       if (!viewerId) {
-        // Guest → only public users
         const publicUsers = await User.find({ isPrivate: false })
           .select("_id")
           .lean();
@@ -109,8 +95,6 @@ export const GET = auth(async (req) => {
             .filter((id) => !blockedUserIds.has(id.toString())),
         };
       } else {
-        // Logged-in feed
-
         const publicUsers = await User.find({ isPrivate: false })
           .select("_id")
           .lean();
@@ -154,21 +138,13 @@ export const GET = auth(async (req) => {
       .lean();
 
     if (!postsRaw.length) {
-      return NextResponse.json({
-        posts: [],
-        hasMore: false,
-        page: isCursorMode ? null : page,
-        total: 0,
-        limit,
-      });
+      return NextResponse.json({ posts: [], hasMore: false });
     }
 
-    const posts = postsRaw as any[];
-
-    const postIds = posts.map((p) => p._id.toString());
+    const postIds = postsRaw.map((p) => p._id.toString());
 
     /* =====================================================
-       STEP 6 — Likes (viewer aware)
+       STEP 6 — Likes
     ===================================================== */
     let likedPostIds: string[] = [];
     if (viewerId) {
@@ -199,28 +175,19 @@ export const GET = auth(async (req) => {
     }
 
     /* =====================================================
-       STEP 8 — Merge extras
+       STEP 8 — Merge
     ===================================================== */
-    const postsWithExtras = posts.map((post) => ({
+    const postsWithExtras = postsRaw.map((post) => ({
       ...post,
       _id: post._id.toString(),
-      likesCount: post.likesCount || 0,
       isLiked: likedPostIds.includes(post._id.toString()),
       comments: commentsMap[post._id.toString()] || [],
     }));
 
-    /* =====================================================
-       STEP 9 — Pagination meta
-    ===================================================== */
-    const hasMore = postsRaw.length === limit;
-    const total = isCursorMode ? null : await Post.countDocuments(query);
-
     return NextResponse.json({
       posts: postsWithExtras,
-      limit,
-      hasMore,
+      hasMore: postsRaw.length === limit,
       page: isCursorMode ? null : page,
-      total,
     });
   } catch (error) {
     console.error("FETCH_POST_ERROR:", error);
@@ -229,20 +196,19 @@ export const GET = auth(async (req) => {
       { status: 500 }
     );
   }
-}) as any;
-
-
+}
 
 /* ============================================================
    POST → Create Post
 ============================================================ */
-export const POST = auth(async (req: any) => {
-  try {
-    const session = req.auth;
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export async function POST(req: NextRequest) {
+  const session = await auth();
 
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
     const { content, mediaUrl, cloudinary_id } = await req.json();
 
     if (!content && !mediaUrl) {
@@ -255,7 +221,6 @@ export const POST = auth(async (req: any) => {
     await connectDB();
 
     const user = await User.findById(session.user.id).select("status");
-
     if (user?.status !== "active") {
       return NextResponse.json(
         { error: "Account restricted" },
@@ -272,17 +237,14 @@ export const POST = auth(async (req: any) => {
     });
 
     return NextResponse.json(
-      {
-        message: "Post created successfully",
-        post,
-      },
+      { message: "Post created successfully", post },
       { status: 201 }
     );
   } catch (error) {
-    console.error("Post Creation Error:", error);
+    console.error("POST_CREATE_ERROR:", error);
     return NextResponse.json(
       { error: "Failed to create post" },
       { status: 500 }
     );
   }
-}) as any;
+}

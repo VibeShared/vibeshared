@@ -1,6 +1,4 @@
-// src/app/api/settings/block/route.ts
-import {  NextResponse } from "next/server";
-import { NextAuthRequest } from "next-auth";
+import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db/connect";
 import { auth } from "@/lib/auth";
 import BlockedUser from "@/lib/models/BlockedUser";
@@ -9,19 +7,21 @@ import mongoose from "mongoose";
 
 /* ---------------- Schema ---------------- */
 const BlockSchema = z.object({
-  userId: z.string().refine((id) => mongoose.Types.ObjectId.isValid(id), {
-    message: "Invalid userId",
-  }),
+  userId: z.string().refine(
+    (id) => mongoose.Types.ObjectId.isValid(id),
+    { message: "Invalid userId" }
+  ),
 });
 
 /* ---------------- POST → Block ---------------- */
-export const POST = auth(async (req: NextAuthRequest) => {
-  try {
-    const session = req.auth;
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export async function POST(req: NextRequest) {
+  const session = await auth();
 
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
     const body = await req.json();
     const parsed = BlockSchema.safeParse(body);
 
@@ -61,16 +61,17 @@ export const POST = auth(async (req: NextAuthRequest) => {
       { status: 500 }
     );
   }
-});
+}
 
 /* ---------------- DELETE → Unblock ---------------- */
-export const DELETE = auth(async (req: NextAuthRequest) => {
-  try {
-    const session = req.auth;
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export async function DELETE(req: NextRequest) {
+  const session = await auth();
 
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
     const body = await req.json();
     const parsed = BlockSchema.safeParse(body);
 
@@ -96,16 +97,17 @@ export const DELETE = auth(async (req: NextAuthRequest) => {
       { status: 500 }
     );
   }
-});
+}
 
 /* ---------------- GET → List Blocked Users ---------------- */
-export const GET = auth(async (req: NextAuthRequest) => {
-  try {
-    const session = req.auth;
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export async function GET(req: NextRequest) {
+  const session = await auth();
 
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
     await connectDB();
 
     const blockedUsers = await BlockedUser.find({
@@ -122,4 +124,4 @@ export const GET = auth(async (req: NextAuthRequest) => {
       { status: 500 }
     );
   }
-});
+}

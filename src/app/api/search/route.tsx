@@ -1,15 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db/connect";
 import User from "@/lib/models/User";
 import BlockedUser from "@/lib/models/BlockedUser";
 import { auth } from "@/lib/auth";
 import mongoose from "mongoose";
 
-export const GET = auth(async (req) => {
+export async function GET(req: NextRequest) {
   try {
-    await connectDB();
+    const session = await auth();
+    const viewerId = session?.user?.id || null;
 
-    const viewerId = req.auth?.user?.id || null;
+    await connectDB();
 
     const { searchParams } = new URL(req.url);
     const query = (searchParams.get("q") || "").trim();
@@ -44,10 +45,7 @@ export const GET = auth(async (req) => {
         $match: {
           status: "active",
           _id: { $nin: blockedIds },
-          $or: [
-            { username: regex },
-            { name: regex },
-          ],
+          $or: [{ username: regex }, { name: regex }],
         },
       },
       { $sort: { username: 1 } },
@@ -77,4 +75,4 @@ export const GET = auth(async (req) => {
       { status: 500 }
     );
   }
-});
+}

@@ -113,106 +113,100 @@ export async function POST(req: NextRequest): Promise<NextResponse<IProfile | Er
 }
 
 // GET → Fetch profile by username or userId
-export const GET = auth(
-  async (req): Promise<NextResponse<IProfile | ErrorResponse | LimitedProfileResponse>> => {
-    try {
-      await connectDB();
+export async function GET(
+  req: NextRequest
+): Promise<NextResponse<IProfile | ErrorResponse | LimitedProfileResponse>> {
+  try {
+    await connectDB();
 
-      const viewerId = req.auth?.user?.id || null;
+    const session = await auth();
+    const viewerId = session?.user?.id || null;
 
-      const { searchParams } = new URL(req.url);
-      const username = searchParams.get("username");
-      const userId = searchParams.get("userId");
+    const { searchParams } = new URL(req.url);
+    const username = searchParams.get("username");
+    const userId = searchParams.get("userId");
 
-      if (!username && !userId) {
+    if (!username && !userId) {
+      return NextResponse.json(
+        { error: "Username or User ID is required" },
+        { status: 400 }
+      );
+    }
+
+    let query: any = {};
+    if (username) {
+      query = { username: username.toLowerCase() };
+    } else if (userId) {
+      if (!Types.ObjectId.isValid(userId)) {
         return NextResponse.json(
-          { error: "Username or User ID is required" },
+          { error: "Invalid User ID format" },
           { status: 400 }
         );
       }
+      query = { userId: new Types.ObjectId(userId) };
+    }
 
-      let query: any = {};
-      if (username) {
-        query = { username: username.toLowerCase() };
-      } else if (userId) {
-        if (!Types.ObjectId.isValid(userId)) {
-          return NextResponse.json(
-            { error: "Invalid User ID format" },
-            { status: 400 }
-          );
-        }
-        query = { userId: new Types.ObjectId(userId) };
-      }
+    const profile = await Profile.findOne(query)
+      .populate("userId", "name email image")
+      .lean();
 
-      const profile = await Profile.findOne(query)
-        .populate("userId", "name email image")
-        .lean();
-
-      if (!profile) {
-        return NextResponse.json(
-          { error: "Profile not found" },
-          { status: 404 }
-        );
-      }
-
-      const targetUserId = profile.userId._id.toString();
-
-      /* --------------------------------
-         1️⃣ OWNER BYPASS
-      -------------------------------- */
-      if (viewerId && viewerId === targetUserId) {
-        return NextResponse.json(profile, { status: 200 });
-      }
-
-      /* --------------------------------
-         2️⃣ HARD BLOCK CHECK (CRITICAL)
-      -------------------------------- */
-      if (viewerId) {
-        const blocked = await BlockedUser.exists({
-          $or: [
-            { blocker: viewerId, blocked: targetUserId },
-            { blocker: targetUserId, blocked: viewerId },
-          ],
-        });
-
-        if (blocked) {
-          return NextResponse.json(
-            { error: "You cannot view this profile" },
-            { status: 403 }
-          );
-        }
-      }
-
-      /* --------------------------------
-         3️⃣ PRIVACY CHECK
-      -------------------------------- */
-      const canView = await canViewFullProfile(viewerId, targetUserId);
-
-      if (!canView) {
-        return NextResponse.json(
-          {
-            userId: profile.userId._id,
-            username: profile.username,
-            avatar: profile.avatar,
-            isPrivate: true,
-          },
-          { status: 200 }
-        );
-      }
-
-      /* --------------------------------
-         4️⃣ RETURN FULL PROFILE
-      -------------------------------- */
-      return NextResponse.json(profile, { status: 200 });
-    } catch (error) {
-      console.error("Fetch profile error:", error);
+    if (!profile) {
       return NextResponse.json(
-        { error: "Failed to fetch profile" },
-        { status: 500 }
+        { error: "Profile not found" },
+        { status: 404 }
       );
     }
+
+    const targetUserId = profile.userId._id.toString();
+
+    /* 1️⃣ OWNER BYPASS */
+    if (viewerId && viewerId === targetUserId) {
+      return NextResponse.json(profile, { status: 200 });
+    }
+
+    /* 2️⃣ BLOCK CHECK */
+    if (viewerId) {
+      const blocked = await BlockedUser.exists({
+        $or: [
+          { blocker: viewerId, blocked: targetUserId },
+          { blocker: targetUserId, blocked: viewerId },
+        ],
+      });
+
+      if (blocked) {
+        return NextResponse.json(
+          { error: "You cannot view this profile" },
+          { status: 403 }
+        );
+      }
+    }
+
+    /* 3️⃣ PRIVACY CHECK */
+    const canView = await canViewFullProfile(viewerId, targetUserId);
+
+    if (!canView) {
+      return NextResponse.json(
+        {
+          userId: profile.userId._id,
+          username: profile.username,
+          avatar: profile.avatar,
+          isPrivate: true,
+        },
+        { status: 200 }
+      );
+    }
+
+    /* 4️⃣ FULL PROFILE */
+    return NextResponse.json(profile, { status: 200 });
+  } catch (error) {
+    console.error("Fetch profile error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch profile" },
+      { status: 500 }
+    );
   }
-);
+}
+
 
 
 // DELETE → Delete profile

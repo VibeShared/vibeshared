@@ -1,34 +1,41 @@
-// src/app/api/post/[id]/route.tsx
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db/connect";
-import Post, { IPost } from "@/lib/models/Post";
-import { Comment, IComment } from "@/lib/models/Comment";
+import Post from "@/lib/models/Post";
+import { Comment } from "@/lib/models/Comment";
 import cloudinary from "@/lib/cloudinary";
-// ✅ Import auth from your config
-import { auth } from "@/lib/auth"; 
+import { auth } from "@/lib/auth";
 import { canViewFullProfile } from "@/lib/helpers/privacyGuard";
 import { isBlocked } from "@/lib/helpers/isBlocked";
 
+/* ============================================================
+   GET → Fetch single post (session-aware)
+============================================================ */
+export async function GET(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await auth();
+    const viewerId = session?.user?.id || null;
 
-// ✅ GET: Publicly accessible but session-aware
-export const GET = auth(async (req, { params }) => {
-  const { id } = (await params) as { id: string };
-   try {
+    const { id } = await context.params;
+
     await connectDB();
 
-    const viewerId = req.auth?.user?.id || null;
-
     const post = await Post.findById(id)
-      .populate("userId", "name image email isPrivate")
+      .populate("userId", "username name image isPrivate")
       .lean();
 
     if (!post) {
-      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Post not found" },
+        { status: 404 }
+      );
     }
 
     const ownerId = post.userId._id.toString();
 
-    // 1️⃣ Block check (highest priority)
+    /* 1️⃣ Block check */
     if (viewerId && (await isBlocked(viewerId, ownerId))) {
       return NextResponse.json(
         { error: "You cannot view this post" },
@@ -36,9 +43,8 @@ export const GET = auth(async (req, { params }) => {
       );
     }
 
-    // 2️⃣ Privacy check
+    /* 2️⃣ Privacy check */
     const canView = await canViewFullProfile(viewerId, ownerId);
-
     if (!canView) {
       return NextResponse.json(
         { error: "This post is private" },
@@ -46,62 +52,72 @@ export const GET = auth(async (req, { params }) => {
       );
     }
 
-    // 3️⃣ Fetch comments ONLY if allowed
+    /* 3️⃣ Fetch comments */
     const comments = await Comment.find({ postId: post._id })
-      .populate("userId", "username name image isPrivate")
+      .populate("userId", "username name image")
       .sort({ createdAt: -1 })
       .lean();
 
-    const normalizedPost = {
-  _id: post._id.toString(),
-
-  userId: {
-    id: post.userId._id.toString(),
-    username: post.userId.username,
-    name: post.userId.name,
-    image: post.userId.image,
-  },
-
-  content: post.content,
-  mediaUrl: post.mediaUrl,
-  createdAt: post.createdAt,
-  likesCount: post.likesCount || 0,
-};
-
-return NextResponse.json({
-  ...normalizedPost,
-  comments,
-});
+    return NextResponse.json({
+      _id: post._id.toString(),
+      userId: {
+        id: ownerId,
+        username: post.userId.username,
+        name: post.userId.name,
+        image: post.userId.image,
+      },
+      content: post.content,
+      mediaUrl: post.mediaUrl,
+      createdAt: post.createdAt,
+      likesCount: post.likesCount || 0,
+      comments,
+    });
   } catch (error) {
-    console.error("Error fetching post:", error);
+    console.error("FETCH_POST_ERROR:", error);
     return NextResponse.json(
       { error: "Failed to fetch post" },
       { status: 500 }
     );
   }
-}) as any;
+}
 
-// ✅ DELETE: Strictly protected
-export const DELETE = auth(async (req, { params }) => {
-  const { id } = (await params) as { id: string };
-  
-  // ✅ Auth.js v5: Check session directly from req.auth
-  const session = req.auth;
+/* ============================================================
+   DELETE → Delete post (owner only)
+============================================================ */
+export async function DELETE(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
   }
 
   try {
-    await connectDB();
-    const post = await Post.findById(id);
-    if (!post) return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    const { id } = await context.params;
 
-    // Ownership check
-    if (post.userId.toString() !== session.user.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    await connectDB();
+
+    const post = await Post.findById(id);
+    if (!post) {
+      return NextResponse.json(
+        { error: "Post not found" },
+        { status: 404 }
+      );
     }
 
-    // Cloudinary Cleanup
+    if (post.userId.toString() !== session.user.id) {
+      return NextResponse.json(
+        { error: "Forbidden" },
+        { status: 403 }
+      );
+    }
+
+    /* Cloudinary cleanup */
     if (post.cloudinary_id) {
       try {
         await cloudinary.uploader.destroy(post.cloudinary_id);
@@ -111,9 +127,15 @@ export const DELETE = auth(async (req, { params }) => {
     }
 
     await Post.findByIdAndDelete(id);
-    return NextResponse.json({ message: "Post deleted successfully" });
+
+    return NextResponse.json({
+      message: "Post deleted successfully",
+    });
   } catch (error) {
-    console.error("Error deleting post:", error);
-    return NextResponse.json({ error: "Failed to delete post" }, { status: 500 });
+    console.error("DELETE_POST_ERROR:", error);
+    return NextResponse.json(
+      { error: "Failed to delete post" },
+      { status: 500 }
+    );
   }
-}) as any;
+}

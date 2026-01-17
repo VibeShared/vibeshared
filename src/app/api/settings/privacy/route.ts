@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db/connect";
 import User from "@/lib/models/User";
 import { auth } from "@/lib/auth";
@@ -10,13 +10,17 @@ const PrivacySchema = z.object({
 });
 
 /* ---------------- PATCH ---------------- */
-export const PATCH = auth(async (req) => {
-  try {
-    const session = req.auth;
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export async function PATCH(req: NextRequest) {
+  const session = await auth();
 
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
+  try {
     const body = await req.json();
     const parsed = PrivacySchema.safeParse(body);
 
@@ -27,14 +31,14 @@ export const PATCH = auth(async (req) => {
       );
     }
 
-    await connectDB();
-
     if (parsed.data.isPrivate === undefined) {
       return NextResponse.json(
         { error: "No valid privacy fields provided" },
         { status: 400 }
       );
     }
+
+    await connectDB();
 
     const user = await User.findByIdAndUpdate(
       session.user.id,
@@ -53,4 +57,4 @@ export const PATCH = auth(async (req) => {
       { status: 500 }
     );
   }
-});
+}

@@ -1,13 +1,15 @@
-import { NextResponse } from "next/server";
-import { NextAuthRequest } from "next-auth";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { deleteUserAccount } from "@/lib/services/deleteUserAccount";
 
-export const DELETE = auth(async (req: NextAuthRequest) => {
-  const session = req.auth;
+export async function DELETE(req: NextRequest) {
+  const session = await auth();
 
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
   }
 
   try {
@@ -23,4 +25,4 @@ export const DELETE = auth(async (req: NextAuthRequest) => {
       { status: 500 }
     );
   }
-});
+}

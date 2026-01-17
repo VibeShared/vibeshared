@@ -1,13 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db/connect";
 import User from "@/lib/models/User";
 import { auth } from "@/lib/auth";
-import { NextAuthRequest } from "next-auth";
 
 /* ---------------- GET /api/me ---------------- */
-export const GET = auth(async (req: NextAuthRequest) => {
+export async function GET(req: NextRequest) {
   try {
-    const session = req.auth;
+    const session = await auth();
 
     if (!session?.user?.id) {
       return NextResponse.json({ user: null }, { status: 200 });
@@ -39,7 +38,7 @@ export const GET = auth(async (req: NextAuthRequest) => {
           "status",
         ].join(" ")
       )
-      .lean(); // ⚡ performance
+      .lean();
 
     if (!user || user.status === "deleted") {
       return NextResponse.json({ user: null }, { status: 200 });
@@ -58,4 +57,4 @@ export const GET = auth(async (req: NextAuthRequest) => {
       { status: 500 }
     );
   }
-});
+}
