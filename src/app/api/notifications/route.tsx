@@ -114,6 +114,7 @@ export async function GET(req: NextRequest) {
 
     const notifications = await Notification.find({ user: userId })
       .populate("sender", "username name image")
+      .populate("postId", "_id")
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean();

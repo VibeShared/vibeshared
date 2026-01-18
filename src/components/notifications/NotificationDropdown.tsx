@@ -79,31 +79,31 @@ export default function NotificationDropdown({
   };
 
   const getNotificationText = (n: any) => {
-    const senders = n.senders || (n.sender ? [n.sender] : []);
-    const names = senders.map((s: any) => s.name || "Someone");
-    let mainText = "";
+  const senderName = n.sender?.name || "Someone";
 
-    if (names.length <= 1) mainText = names[0] || "Someone";
-    else if (names.length === 2) mainText = `${names[0]} and ${names[1]}`;
-    else mainText = `${names[0]}, ${names[1]} and ${names.length - 2} others`;
+  switch (n.type) {
+    case "like":
+      return `${senderName} liked your post ❤️`;
 
-    switch (n.type) {
-      case "like":
-        return `${mainText} liked your post ❤️`;
-      case "comment":
-  return n.message
-    ? `${mainText} commented: "${n.message}"`
-    : `${mainText} commented on your post 💬`;
-      case "follow":
-        return `${mainText} started following you ➕`;
-      case "tip":
-        return n.message || `${mainText} sent you a tip 💰`;
-      case "follow_request":
-        return `${mainText} sent you a follow request`;
-      default:
-        return `${mainText} interacted with you`;
-    }
-  };
+    case "comment":
+      return n.message
+        ? `${senderName} commented: "${n.message}"`
+        : `${senderName} commented on your post 💬`;
+
+    case "follow":
+      return `${senderName} started following you ➕`;
+
+    case "follow_request":
+      return `${senderName} sent you a follow request`;
+
+    case "tip":
+      return n.message || `${senderName} sent you a tip 💰`;
+
+    default:
+      return `${senderName} interacted with you`;
+  }
+};
+
 
   return (
     <Dropdown
@@ -154,18 +154,21 @@ export default function NotificationDropdown({
             // Senders logic fix for ID navigation
             const senderData = n.senders?.[0] || n.sender;
 
+            const postId =
+  typeof n.postId === "string" ? n.postId : n.postId?._id;
+
             return (
               <Dropdown.Item
                 key={n._id}
                 className={`notification-item d-flex align-items-start gap-2 py-3 border-bottom ${
                   n.read ? "opacity-75" : "bg-light fw-bold"
                 }`}
-                style={{ whiteSpace: "normal", wordBreak: "break-word" }} // 👈 Details cut hone se rokega
+                style={{ whiteSpace: "normal", wordBreak: "break-word" }} 
                 onClick={() => {
                   markSingleAsRead(n._id);
 
-                  if ((n.type === "like" || n.type === "comment") && n.postId) {
-                    window.location.href = `/post/${n.postId}`;
+                  if ((n.type === "like" || n.type === "comment") && postId) {
+                   window.location.href = `/post/${postId}`;
                     return;
                   }
 
@@ -177,18 +180,27 @@ export default function NotificationDropdown({
                 }}
               >
                 <Image
-                  src={
-                    senderData?.image ||
-                    "https://res.cloudinary.com/dlcrwtyd3/image/upload/v1757470463/3135715_niwuv2.png"
-                  }
-                  roundedCircle
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    flexShrink: 0,
-                    objectFit: "cover",
-                  }}
-                />
+  src={
+    senderData?.image ||
+    "https://res.cloudinary.com/dlcrwtyd3/image/upload/v1757470463/3135715_niwuv2.png"
+  }
+  roundedCircle
+  style={{
+    width: "40px",
+    height: "40px",
+    flexShrink: 0,
+    objectFit: "cover",
+    cursor: "pointer",
+  }}
+  onClick={(e) => {
+    e.stopPropagation(); // ⛔ stop parent click
+
+    if (senderData?.username) {
+      window.location.href = `/profile/${senderData.username}`;
+    }
+  }}
+/>
+
                 <div className="flex-grow-1">
                   <div style={{ fontSize: "0.85rem", lineHeight: "1.2" }}>
                     {getNotificationText(n)}

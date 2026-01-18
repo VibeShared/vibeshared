@@ -70,6 +70,13 @@ export async function POST(req: NextRequest) {
       post.likesCount = Math.max((post.likesCount || 1) - 1, 0);
       await post.save();
 
+      await Notification.deleteOne({
+  user: ownerId,
+  sender: userId,
+  postId,
+  type: "like",
+});
+
       return NextResponse.json({
         message: "Post unliked",
         likesCount: post.likesCount,
@@ -80,16 +87,26 @@ export async function POST(req: NextRequest) {
     post.likesCount = (post.likesCount || 0) + 1;
     await post.save();
 
-    /* ---------- Notification ---------- */
-    if (ownerId !== userId) {
-      await Notification.create({
-        user: ownerId,
-        sender: userId,
-        type: "like",
-        postId,
-        read: false,
-      });
-    }
+  /* ---------- Notification ---------- */
+if (ownerId !== userId) {
+  const alreadyNotified = await Notification.findOne({
+    user: ownerId,
+    sender: userId,
+    postId,
+    type: "like",
+  });
+
+  if (!alreadyNotified) {
+    await Notification.create({
+      user: ownerId,
+      sender: userId,
+      type: "like",
+      postId,
+      read: false,
+    });
+  }
+}
+
 
     return NextResponse.json({
       message: "Post liked",
