@@ -6,25 +6,27 @@ import { connectDB } from "@/lib/db/connect";
 import Post from "@/lib/models/Post";
 import { canViewFullProfile } from "@/lib/helpers/privacyGuard";
 import BlockedUser from "@/lib/models/BlockedUser";
+import mongoose from "mongoose";
 
 export async function GET(
-  req: NextRequest,
+  _req: NextRequest,
   context: { params: Promise<{ postId: string }> }
 ) {
   try {
-    const session = await auth();
-    const viewerId = session?.user?.id || null;
-
-    await connectDB();
-
     const { postId } = await context.params;
 
-    if (!postId) {
+    // 🔒 HARD GUARD (prevents Mongo CastError)
+    if (!postId || !mongoose.Types.ObjectId.isValid(postId)) {
       return NextResponse.json(
-        { error: "Post ID missing" },
+        { error: "Invalid postId" },
         { status: 400 }
       );
     }
+
+    await connectDB();
+
+    const session = await auth();
+    const viewerId = session?.user?.id || null;
 
     /* --------------------------------
        1️⃣ Fetch base post
@@ -47,6 +49,7 @@ export async function GET(
         userId: ownerId,
         createdAt: { $lte: basePost.createdAt },
       })
+      .populate("userId", "username name image")
         .sort({ createdAt: -1 })
         .limit(10)
         .lean();
@@ -91,11 +94,13 @@ export async function GET(
       userId: ownerId,
       createdAt: { $lte: basePost.createdAt },
     })
+     .populate("userId", "username name image")
       .sort({ createdAt: -1 })
       .limit(10)
       .lean();
 
     return NextResponse.json({ posts });
+
   } catch (error) {
     console.error("POST_FROM_ERROR:", error);
     return NextResponse.json(
