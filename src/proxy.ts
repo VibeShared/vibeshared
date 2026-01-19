@@ -5,6 +5,12 @@ import { auth } from "@/lib/auth";
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+
+
+  if (pathname.match(/^\/[^/]+\/post\/[^/]+$/)) {
+  return NextResponse.next();
+}
+
   /* ----------------------------------
    * 1. PUBLIC AUTH ROUTES
    * ---------------------------------- */

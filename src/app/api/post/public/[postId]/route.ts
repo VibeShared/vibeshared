@@ -1,5 +1,3 @@
-// src/app/api/post/public/[postId]/route.ts
-
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db/connect";
 import Post from "@/lib/models/Post";
@@ -12,7 +10,7 @@ export async function GET(
   try {
     const { postId } = await params;
 
-    // 🔒 HARD GUARD (prevents crawler + Mongo crashes)
+    // 🔒 HARD GUARD (prevents CastError)
     if (!postId || !mongoose.Types.ObjectId.isValid(postId)) {
       return NextResponse.json(
         { error: "Invalid postId" },
@@ -50,9 +48,8 @@ export async function GET(
         },
       }
     );
-
   } catch (err) {
-    // ⚠️ DO NOT return 500 (Facebook caches failures)
+    // ⚠️ Do NOT return 500 (social crawlers cache failures)
     return NextResponse.json(
       { error: "Metadata unavailable" },
       { status: 200 }

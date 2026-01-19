@@ -1,91 +1,22 @@
-// src/app/post/[postId]/page.tsx
-
 import { auth } from "@/lib/auth";
 import UserPostsList from "@/components/post/UserPostsList";
 import { headers } from "next/headers";
-import type { Metadata } from "next";
 import mongoose from "mongoose";
+import { redirect } from "next/navigation";
 
-/* ================= METADATA (PUBLIC / BOT SAFE) ================= */
+/* ================= HELPERS ================= */
 
-export async function generateMetadata(
-  { params }: { params: Promise<{ postId: string }> }
-): Promise<Metadata> {
-
-  const { postId } = await params;
-
-  // 🔒 Hard guard (prevents crawler + Mongo crashes)
-  if (!postId || !mongoose.Types.ObjectId.isValid(postId)) {
-    return {
-      title: "Post not found",
-      robots: {
-        index: false,
-        follow: false,
-      },
-    };
-  }
-
+async function getPublicPost(postId: string) {
   const baseUrl = process.env.NEXTAUTH_URL!;
-  const res = await fetch(
-    `${baseUrl}/api/post/public/${postId}`,
-    { cache: "no-store" }
-  );
-
-  if (!res.ok) {
-    return {
-      title: "Post not found",
-      robots: {
-        index: false,
-        follow: false,
-      },
-    };
-  }
-
-  const post = await res.json();
-
-  const imageUrl = post.mediaUrl
-    ? post.mediaUrl.startsWith("http")
-      ? post.mediaUrl
-      : `${baseUrl}${post.mediaUrl}`
-    : null;
-
-  return {
-    title: `${post.user.name} (@${post.user.username})`,
-    description: post.content?.slice(0, 150),
-
-    openGraph: {
-      type: "article",
-      title: `${post.user.name} (@${post.user.username})`,
-      description: post.content?.slice(0, 150),
-      url: `${baseUrl}/${post.user.username}/post/${post._id}`,
-      images: imageUrl
-        ? [
-            {
-              url: imageUrl,
-              width: 1200,
-              height: 630,
-              alt: post.content?.slice(0, 100),
-            },
-          ]
-        : [],
-    },
-
-    twitter: {
-      card: "summary_large_image",
-      title: `${post.user.name} (@${post.user.username})`,
-      description: post.content?.slice(0, 150),
-      images: imageUrl ? [imageUrl] : [],
-    },
-  };
+  const res = await fetch(`${baseUrl}/api/post/public/${postId}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) return null;
+  return res.json();
 }
 
-/* ================= PAGE DATA FETCH (AUTH REQUIRED) ================= */
-
 async function getFeedFromPost(postId: string) {
-  // 🔒 Safety guard
-  if (!mongoose.Types.ObjectId.isValid(postId)) {
-    return null;
-  }
+  if (!mongoose.Types.ObjectId.isValid(postId)) return null;
 
   const baseUrl = process.env.NEXTAUTH_URL!;
   const h = await headers();
@@ -104,7 +35,7 @@ async function getFeedFromPost(postId: string) {
   return res.json();
 }
 
-/* ================= PAGE COMPONENT ================= */
+/* ================= PAGE ================= */
 
 export default async function PostFeedPage({
   params,
@@ -117,10 +48,24 @@ export default async function PostFeedPage({
     return <p className="text-center py-4">Invalid post</p>;
   }
 
-  const [session, data] = await Promise.all([
-    auth(),
-    getFeedFromPost(postId),
-  ]);
+  const session = await auth();
+  const publicPost = await getPublicPost(postId);
+
+  if (!publicPost) {
+    return <p className="text-center py-4">Post not found</p>;
+  }
+
+  /**
+   * 🔑 CORE RULE
+   * Guest / crawler → redirect to public page
+   * Logged-in user → run original app logic
+   */
+  if (!session) {
+    redirect(`/${publicPost.user.username}/post/${postId}`);
+  }
+
+  // ✅ ORIGINAL LOGIC (UNCHANGED)
+  const data = await getFeedFromPost(postId);
 
   if (!data?.posts?.length) {
     return <p className="text-center py-4">Post not found</p>;
@@ -132,7 +77,7 @@ export default async function PostFeedPage({
         <div className="col-12 col-md-8">
           <UserPostsList
             posts={data.posts}
-            currentUserId={session?.user?.id ?? ""}
+            currentUserId={session.user.id}
           />
         </div>
       </div>
