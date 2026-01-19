@@ -10,3 +10,44 @@ h1, h2, h3, h4, h5, h6,
 .navbar-brand, .nav-link {
   font-family: var(--font-poppins), sans-serif;
 }
+
+
+
+
+/* Grid layout */
+.share-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding: 16px;
+  justify-items: center;
+}
+
+/* Icon button */
+.share-icon {
+  width: 48px;
+  height: 48px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  color: inherit;
+
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.15s ease;
+}
+
+/* Hover / focus */
+.share-icon:hover,
+.share-icon:focus-visible {
+  background-color: rgba(0, 123, 255, 0.1); /* light info */
+}
+
+/* Active tap */
+.share-icon:active {
+  transform: scale(0.95);
+}
