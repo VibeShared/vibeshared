@@ -57,20 +57,20 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer());
 
     const result = await new Promise<any>((resolve, reject) => {
-      cloudinary.uploader
-        .upload_stream(
-          {
-            folder: `vibe_app/users/${user.username}/posts`,
-            resource_type: "image",
-            transformation: [{ width: 1080, quality: "auto" }],
-          },
-          (err, res) => {
-            if (err) reject(err);
-            else resolve(res);
-          }
-        )
-        .end(buffer);
-    });
+  cloudinary.uploader
+    .upload_stream(
+      {
+        folder: `vibe_app/users/${user._id}/posts`,
+        resource_type: "image",
+        transformation: [{ width: 1080, quality: "auto" }],
+      },
+      (err, res) => {
+        if (err) reject(err);
+        else resolve(res);
+      }
+    )
+    .end(buffer);
+});
 
     return NextResponse.json({
       url: result.secure_url,

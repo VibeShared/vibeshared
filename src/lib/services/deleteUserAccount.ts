@@ -18,32 +18,25 @@ export async function deleteUserAccount(userId: string) {
     const user = await User.findById(_id).session(session);
     if (!user) throw new Error("User not found");
 
-    /* ---------- POSTS + MEDIA ---------- */
+    /* ---------- POSTS ---------- */
     const posts = await Post.find({ userId: _id })
-  .select("_id cloudinary_id")
-  .session(session);
+      .select("_id cloudinary_id")
+      .session(session);
 
-const postIds = posts.map(p => p._id);
+    const postIds = posts.map(p => p._id);
 
-/* delete interactions on these posts */
-await Comment.deleteMany({ postId: { $in: postIds } }).session(session);
-await Like.deleteMany({ postId: { $in: postIds } }).session(session);
-await Notification.deleteMany({ postId: { $in: postIds } }).session(session);
+    /* ---------- POST INTERACTIONS ---------- */
+    await Comment.deleteMany({ postId: { $in: postIds } }).session(session);
+    await Like.deleteMany({ postId: { $in: postIds } }).session(session);
+    await Notification.deleteMany({ postId: { $in: postIds } }).session(session);
 
-/* delete media */
-for (const post of posts) {
-  if (post.cloudinary_id) {
-    await cloudinary.uploader.destroy(post.cloudinary_id);
-  }
-}
+    /* ---------- POSTS ---------- */
+    await Post.deleteMany({ _id: { $in: postIds } }).session(session);
 
-/* delete posts */
-await Post.deleteMany({ _id: { $in: postIds } }).session(session);
-
-    /* ---------- COMMENTS ---------- */
+    /* ---------- USER COMMENTS ---------- */
     await Comment.deleteMany({ userId: _id }).session(session);
 
-    /* ---------- LIKES + COUNTERS ---------- */
+    /* ---------- USER LIKES + COUNTERS ---------- */
     const likes = await Like.find({ userId: _id }).session(session);
     for (const like of likes) {
       await Post.updateOne(
@@ -68,10 +61,15 @@ await Post.deleteMany({ _id: { $in: postIds } }).session(session);
       $or: [{ blocker: _id }, { blocked: _id }],
     }).session(session);
 
-    /* ---------- PROFILE IMAGE ---------- */
-    if (user.cloudinary_id && !user.image?.includes("default")) {
-      await cloudinary.uploader.destroy(user.cloudinary_id);
-    }
+    /* ---------- CLOUDINARY (CRITICAL FIX) ---------- */
+    const cloudinaryPrefix = `vibe_app/users/${_id.toString()}`;
+
+    await cloudinary.api.delete_resources_by_prefix(
+      cloudinaryPrefix,
+      { resource_type: "image" }
+    );
+
+    await cloudinary.api.delete_folder(cloudinaryPrefix);
 
     /* ---------- USER ---------- */
     await User.deleteOne({ _id }).session(session);
