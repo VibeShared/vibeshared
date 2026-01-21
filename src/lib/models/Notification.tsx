@@ -17,7 +17,7 @@ const NotificationSchema = new Schema<INotification>(
   {
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },
     sender: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    type: { type: String, enum: ["like", "comment", "follow", "follow_request", "tip"], required: true },
+    type: { type: String, enum: ["like", "comment", "follow", "follow_request"], required: true },
     message: { type: String },
     postId: { type: Schema.Types.ObjectId, ref: "Post" },
     read: { type: Boolean, default: false },

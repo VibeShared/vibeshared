@@ -1,31 +1,44 @@
-// src/auth.config.ts
-import Google from "next-auth/providers/google";
-import Facebook from "next-auth/providers/facebook";
-import Twitter from "next-auth/providers/twitter";
-import { NextAuthConfig } from "next-auth";
+import type { NextAuthConfig } from "next-auth";
 
 export const authConfig: NextAuthConfig = {
   trustHost: true,
-  providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-    Twitter({
-      clientId: process.env.TWITTER_CLIENT_ID!,
-      clientSecret: process.env.TWITTER_CLIENT_SECRET!,
-    }),
-  ],
   pages: {
     signIn: "/login",
   },
+  session: {
+    strategy: "jwt",
+  },
   callbacks: {
-    // Note: Detailed logic moved to middleware for better control
+    async jwt({ token, user, trigger, session }) {
+      if (user) {
+        token.id = user.id;
+        token.username = user.username;
+        token.role = user.role;
+        token.isPrivate = user.isPrivate;
+        token.isVerified = user.isVerified;
+      }
+      if (trigger === "update" && session?.user) {
+        token.name = session.user.name;
+        token.image = session.user.image;
+        token.username = session.user.username;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (token && session.user) {
+        session.user.id = token.id as string;
+        session.user.username = token.username as string;
+        session.user.role = token.role as string;
+        session.user.isPrivate = token.isPrivate as boolean;
+        session.user.isVerified = token.isVerified as boolean;
+      }
+      return session;
+    },
     authorized({ auth }) {
       return !!auth; 
     },
   },
-  session: { strategy: "jwt" },
-};
+  providers: [], // Empty array here; populated in auth.ts
+} satisfies NextAuthConfig;
 
 export default authConfig;
