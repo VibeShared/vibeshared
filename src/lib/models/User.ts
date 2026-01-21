@@ -19,11 +19,7 @@ export interface IUser extends Document {
   isVerified?: boolean;
   role?: "user" | "admin";
   status?: "active" | "suspended" | "deleted";
-  commentPermission?: "everyone" | "followers";
   lastUsernameChange?: Date
-  notificationLikes?: boolean;
-  notificationComments?: boolean;
-  notificationFollows?: boolean;
   termsAccepted: boolean;
   termsAcceptedAt: Date;
 }
@@ -65,30 +61,9 @@ const UserSchema = new Schema<IUser>(
     type: Boolean,
     default: false,
   },
-  commentPermission: {
-    type: String,
-    enum: ["everyone", "followers"],
-    default: "everyone",
-  },
 
 termsAccepted: { type: Boolean, required: true },
 termsAcceptedAt: { type: Date },
-
-
-  notificationLikes: {
-    type: Boolean,
-    default: true,
-  },
-
-  notificationComments: {
-    type: Boolean,
-    default: true,
-  },
-
-  notificationFollows: {
-    type: Boolean,
-    default: true,
-  },
   
 
   role: {

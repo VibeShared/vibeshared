@@ -142,14 +142,6 @@ const TermsAndConditions: NextPage = () => {
                   <li>Impersonating others or providing false information</li>
                 </ul>
 
-                <h3 id="item-7" className="h4 border-bottom pb-2 mb-3 mt-4">
-                  <i className="fas fa-money-bill-wave text-primary me-2"></i>7. Platform Fees
-                </h3>
-                <p>
-                  VibeShared charges a <strong>30% platform fee</strong> on all tip revenue. The remaining 70% is credited to the creator’s wallet. 
-                  This fee supports platform operations, maintenance, and growth.
-                </p>
-
                 <h3 id="item-8" className="h4 border-bottom pb-2 mb-3 mt-4">
                   <i className="fas fa-undo text-primary me-2"></i>8. Refund & Chargeback Policy
                 </h3>
@@ -158,13 +150,6 @@ const TermsAndConditions: NextPage = () => {
                   for tips made through the platform, except where required by law.
                 </p>
 
-                <h3 id="item-9" className="h4 border-bottom pb-2 mb-3 mt-4">
-                  <i className="fas fa-wallet text-primary me-2"></i>9. Payout Policy
-                </h3>
-                <p>
-                  Creators may withdraw available funds from their wallet once they reach the minimum payout threshold. 
-                  Payouts are processed within 7 business days and may be subject to third-party processing fees.
-                </p>
 
                 <h3 id="item-10" className="h4 border-bottom pb-2 mb-3 mt-4">
                   <i className="fas fa-child text-primary me-2"></i>10. Age Restriction

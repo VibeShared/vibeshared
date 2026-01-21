@@ -83,15 +83,6 @@ export default function AuthButton() {
             Profile
           </button>
 
-
-          <button
-            onClick={() => router.push(`/wallet/${session.user.username}`)}
-            className="dropdown-item d-flex align-items-center ms-3 py-2"
-          >
-            <i className="bi bi-wallet me-2"></i>
-           Wallet
-          </button>
-
           <button
             onClick={() => router.push("/settings")}
             className="dropdown-item d-flex align-items-center ms-3 py-2"

@@ -70,8 +70,7 @@ export default auth((req) => {
   const isProtectedRoute = 
     pathname.startsWith("/profile") ||
     pathname.startsWith("/post") ||
-    pathname.startsWith("/searchBox") ||
-    pathname.startsWith("/wallet");
+    pathname.startsWith("/searchBox")
 
   if (isProtectedRoute) {
     if (!isLoggedIn) {

@@ -6,7 +6,6 @@ import LikeButton from "@/components/ui/LikeButton";
 import DeletePostButton from "@/components/ui/DeletePostButton";
 import { useState, useRef, useEffect } from "react";
 import style from "@/styles/components/post/PostCard.module.css";
-import TipButton from "@/components/payment/payment";
 import { MessageCircle, Share2 } from "lucide-react";
 import ShareButton from "@/components/ui/ShareButton";
 import BlockButton from "@/components/ui/BlockButton";
@@ -300,10 +299,7 @@ export default function PostCard({
   <MessageCircle size={30} />
 </button>
 
-          <TipButton
-            creatorName={post.userId?.name || "User"}
-            buyMeACoffeeLink="https://buymeacoffee.com/vibeshared"
-          />
+         
         <ShareButton post={post} />
 
 
