@@ -30,13 +30,6 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
-  // 3. ADMIN PROTECTION
-  if (pathname.startsWith("/admin")) {
-    if (!isLoggedIn || userRole !== "admin") {
-      return NextResponse.redirect(new URL("/login", nextUrl));
-    }
-  }
-
   // 4. USER PROTECTION & ROOT REDIRECT
   const isProtectedRoute = ["/profile", "/post", "/searchBox", "/wallet"].some(route => 
     pathname.startsWith(route)
@@ -44,7 +37,6 @@ export default auth((req) => {
 
   if (pathname === "/") {
     if (!isLoggedIn) return NextResponse.redirect(new URL("/login", nextUrl));
-    if (userRole === "admin") return NextResponse.redirect(new URL("/admin/withdrawals", nextUrl));
     return NextResponse.next();
   }
 
