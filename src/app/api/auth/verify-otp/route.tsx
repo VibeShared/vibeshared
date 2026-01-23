@@ -1,36 +1,66 @@
-// src/app/api/auth/verify-otp/route.tsx
+// src/app/api/auth/verify-otp/route.ts
 import { NextResponse } from "next/server";
-import mongoose from "mongoose";
-import {connectDB} from "@/lib/db/connect";
+import { connectDB } from "@/lib/db/connect";
 import Otp from "@/lib/models/Otp";
 
 export async function POST(req: Request) {
   try {
-    let email, otp;
-    try {
-      const body = await req.json();
-      email = body.email;
-      otp = body.otp;
-    } catch (err) {
-      return NextResponse.json({ error: "Invalid JSON format" }, { status: 400 });
+    // ✅ Mobile-safe JSON parsing
+    const body = await req.json().catch(() => null);
+
+    if (!body) {
+      return NextResponse.json(
+        { error: "Invalid request body" },
+        { status: 400 }
+      );
     }
+
+    const { email, otp } = body;
+
     if (!email || !otp) {
-      return NextResponse.json({ error: "Email and OTP required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Email and OTP required" },
+        { status: 400 }
+      );
+    }
+
+    const normalizedEmail =
+      typeof email === "string" ? email.toLowerCase().trim() : null;
+
+    if (!normalizedEmail) {
+      return NextResponse.json(
+        { error: "Invalid email" },
+        { status: 400 }
+      );
     }
 
     await connectDB();
 
-    const record = await Otp.findOne({ email, otp });
+    const record = await Otp.findOne({
+      email: normalizedEmail,
+      otp: String(otp),
+    });
+
     if (!record) {
-      return NextResponse.json({ error: "Invalid or expired OTP" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid or expired OTP" },
+        { status: 400 }
+      );
     }
 
-    // OTP is valid → delete it
-    await Otp.deleteOne({ email });
+    // ✅ OTP is single-use → delete after success
+    await Otp.deleteOne({ email: normalizedEmail });
 
-    return NextResponse.json({ message: "OTP verified ✅" });
+    return NextResponse.json({
+      message: "OTP verified",
+      verified: true,
+    });
   } catch (error) {
     console.error("OTP verify error:", error);
-    return NextResponse.json({ error: "Failed to verify OTP" }, { status: 500 });
+
+    return NextResponse.json(
+      { error: "Failed to verify OTP" },
+      { status: 500 }
+    );
   }
 }

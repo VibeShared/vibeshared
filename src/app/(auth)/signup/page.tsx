@@ -192,36 +192,33 @@ export default function SignupPage() {
     }
   };
 
-  async function checkUsernameAvailability(username: string) {
+ async function checkUsernameAvailability(username: string) {
   if (username.length < 3) return;
 
   try {
     const res = await fetch("/api/auth/check-availability", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: formData.email || undefined,
-        username,
-      }),
+      body: JSON.stringify({ username }), // ✅ ONLY username
     });
 
     if (!res.ok) {
-  const data = await res.json();
-  setFieldErrors((prev) => ({
-    ...prev,
-    username: data.error,
-  }));
-} else {
-  setFieldErrors((prev) => ({
-    ...prev,
-    username: undefined,
-  }));
-}
-
+      const data = await res.json();
+      setFieldErrors((prev) => ({
+        ...prev,
+        username: data.error,
+      }));
+    } else {
+      setFieldErrors((prev) => ({
+        ...prev,
+        username: undefined,
+      }));
+    }
   } catch {
     // silent fail
   }
 }
+
 
 
   async function handleSendOtp() {
@@ -256,10 +253,19 @@ export default function SignupPage() {
 
 if (!checkRes.ok) {
   const data = await checkRes.json();
-  setError(data.error);
+
+  const message = data?.error || data?.message || "Already exists";
+
+  setFieldErrors((prev) => ({
+    ...prev,
+    username: data?.field === "username" ? message : undefined,
+    email: data?.field === "email" ? message : undefined,
+  }));
+
   setIsOtpLoading(false);
   return;
 }
+
 
 
 

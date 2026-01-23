@@ -5,43 +5,63 @@ import User from "@/lib/models/User";
 
 export async function POST(req: Request) {
   try {
-  const { email, username } = await req.json();
+    // ✅ Mobile-safe JSON parsing
+    const body = await req.json().catch(() => null);
 
-if (!username) {
-  return NextResponse.json(
-    { error: "Username required" },
-    { status: 400 }
-  );
-}
+    if (!body) {
+      return NextResponse.json(
+        { error: "Invalid request body" },
+        { status: 400 }
+      );
+    }
 
-await connectDB();
+    const { email, username } = body;
 
-const query: any[] = [
-  { username: username.toLowerCase().trim() },
-];
+    if (!username || typeof username !== "string") {
+      return NextResponse.json(
+        { error: "Username required" },
+        { status: 400 }
+      );
+    }
 
-if (email) {
-  query.push({ email: email.toLowerCase().trim() });
-}
+    const normalizedUsername = username.toLowerCase().trim();
+    const normalizedEmail =
+      typeof email === "string" ? email.toLowerCase().trim() : null;
 
-const existingUser = await User.findOne({ $or: query });
+    await connectDB();
 
-if (existingUser) {
-  if (email && existingUser.email === email.toLowerCase().trim()) {
-    return NextResponse.json(
-      { error: "Email already registered" },
-      { status: 409 }
-    );
-  }
-  return NextResponse.json(
-    { error: "Username already taken" },
-    { status: 409 }
-  );
-}
+    const query: any[] = [{ username: normalizedUsername }];
 
-return NextResponse.json({ available: true });
+    if (normalizedEmail) {
+      query.push({ email: normalizedEmail });
+    }
 
+    const existingUser = await User.findOne({ $or: query });
+
+    if (existingUser) {
+      if (
+        normalizedEmail &&
+        existingUser.email === normalizedEmail
+      ) {
+        return NextResponse.json(
+          { available: false, field: "email", message: "Email already registered" },
+          { status: 409 }
+        );
+      }
+
+      return NextResponse.json(
+        { available: false, field: "username", message: "Username already taken" },
+        { status: 409 }
+      );
+    }
+
+    return NextResponse.json({
+      available: true,
+      message: "Available",
+    });
   } catch (error) {
+    console.error("Check availability error:", error);
+
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

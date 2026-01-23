@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import jwt from "jsonwebtoken";
 import { connectDB } from "@/lib/db/connect";
 import User from "@/lib/models/User";
 import { auth } from "@/lib/auth";
@@ -6,15 +7,45 @@ import { auth } from "@/lib/auth";
 /* ---------------- GET /api/me ---------------- */
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth();
+    let userId: string | null = null;
 
-    if (!session?.user?.id) {
+    /* ---------- 1. Try NextAuth (Web) ---------- */
+    const session = await auth();
+    if (session?.user?.id) {
+      userId = session.user.id;
+    }
+
+    /* ---------- 2. Try Bearer Token (Mobile) ---------- */
+    if (!userId) {
+      const authHeader = req.headers.get("authorization");
+
+      if (authHeader?.startsWith("Bearer ")) {
+        const token = authHeader.replace("Bearer ", "");
+
+        try {
+          const decoded = jwt.verify(
+            token,
+            process.env.AUTH_SECRET!
+          ) as any;
+
+          userId = decoded.id;
+        } catch {
+          return NextResponse.json(
+            { error: "Invalid token" },
+            { status: 401 }
+          );
+        }
+      }
+    }
+
+    /* ---------- 3. No auth ---------- */
+    if (!userId) {
       return NextResponse.json({ user: null }, { status: 200 });
     }
 
     await connectDB();
 
-    const user = await User.findById(session.user.id)
+    const user = await User.findById(userId)
       .select(
         [
           "_id",

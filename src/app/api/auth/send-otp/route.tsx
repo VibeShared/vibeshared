@@ -7,37 +7,64 @@ import User from "@/lib/models/User";
 
 export async function POST(req: Request) {
   try {
-    const { email, username } = await req.json();
+    // ✅ Mobile-safe body parsing
+    const body = await req.json().catch(() => null);
 
-    if (!email) {
+    if (!body) {
+      return NextResponse.json(
+        { error: "Invalid request body" },
+        { status: 400 }
+      );
+    }
+
+    const { email, username } = body;
+
+    if (!email || typeof email !== "string") {
       return NextResponse.json(
         { error: "Email required" },
         { status: 400 }
       );
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedUsername =
+      typeof username === "string"
+        ? username.toLowerCase().trim()
+        : null;
+
     await connectDB();
 
-    // 🚫 Block OTP for already registered email
-    const existingUser = await User.findOne({ email , username });
+    // 🚫 Block OTP if email OR username already exists
+    const existingUser = await User.findOne({
+      $or: [
+        { email: normalizedEmail },
+        ...(normalizedUsername ? [{ username: normalizedUsername }] : []),
+      ],
+    });
+
     if (existingUser) {
       return NextResponse.json(
-        { error: "Email or username already registered. Please login." },
+        {
+          error: "Email or username already registered. Please login.",
+        },
         { status: 409 }
       );
     }
 
-    // Generate OTP
+    // ✅ Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Save OTP
+    // ✅ Save / overwrite OTP
     await Otp.findOneAndUpdate(
-      { email },
-      { otp, createdAt: new Date() },
+      { email: normalizedEmail },
+      {
+        otp,
+        createdAt: new Date(),
+      },
       { upsert: true }
     );
 
-    // Mail transporter
+    // ✅ Mail transporter
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT),
@@ -50,14 +77,17 @@ export async function POST(req: Request) {
 
     await transporter.sendMail({
       from: `"VibeShared" <${process.env.SMTP_USER}>`,
-      to: email,
+      to: normalizedEmail,
       subject: "Your OTP Code",
       text: `Your OTP is: ${otp}. It is valid for 5 minutes.`,
     });
 
-    return NextResponse.json({ message: "OTP sent successfully" });
+    return NextResponse.json({
+      message: "OTP sent successfully",
+    });
   } catch (error) {
     console.error("OTP send error:", error);
+
     return NextResponse.json(
       { error: "Failed to send OTP" },
       { status: 500 }
