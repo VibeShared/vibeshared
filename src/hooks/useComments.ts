@@ -1,7 +1,11 @@
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+//src/hooks/useComments.ts
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 interface AddCommentPayload {
-  userId: string;
   postId: string;
   text: string;
   parentId?: string;
@@ -9,55 +13,125 @@ interface AddCommentPayload {
 
 interface DeleteCommentPayload {
   commentId: string;
-  userId: string;
 }
 
 export function useComments(postId: string) {
   const queryClient = useQueryClient();
 
+  /* =========================
+     FETCH COMMENTS (CURSOR)
+  ========================= */
   const commentsQuery = useInfiniteQuery({
     queryKey: ["comments", postId],
-    initialPageParam: 1,
+    initialPageParam: null as string | null,
+
     queryFn: async ({ pageParam }) => {
-      const res = await fetch(`/api/comments?postId=${postId}&page=${pageParam}&limit=10`);
-      if (!res.ok) throw new Error("Failed to fetch comments");
-      return res.json();
-    },
-    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
+  const url = new URL("/api/comments", window.location.origin);
+  url.searchParams.set("postId", postId);
+  url.searchParams.set("limit", "10");
+
+  if (pageParam) {
+    url.searchParams.set("cursor", pageParam);
+  }
+
+  const res = await fetch(url.toString(), {
+    credentials: "include", // 🔥 THIS WAS MISSING
+  });
+
+  const json = await res.json();
+
+  if (!res.ok || !json.success) {
+    throw new Error(json.error || "Failed to fetch comments");
+  }
+
+  return json.data as {
+    comments: any[];
+    nextCursor: string | null;
+  };
+},
+
+
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     staleTime: 60_000,
   });
 
+  /* =========================
+     ADD COMMENT
+  ========================= */
   const addComment = useMutation({
-    // ✅ Updated to accept explicit payload type
-    mutationFn: async (payload: AddCommentPayload) => {
-      const res = await fetch("/api/comments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to post comment");
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["comments", postId] });
-    },
-  });
+  mutationFn: async (payload: AddCommentPayload) => {
+    const res = await fetch("/api/comments", {
+      credentials: "include",
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.error || "Failed to post comment");
+    }
+
+    return json.data;
+  },
+
+  onMutate: async (newComment) => {
+    await queryClient.cancelQueries({ queryKey: ["comments", postId] });
+
+    const previousData = queryClient.getQueryData(["comments", postId]);
+
+    queryClient.setQueryData(["comments", postId], (old: any) => {
+      if (!old) return old;
+
+      // add new comment to FIRST page
+      old.pages[0].comments.unshift({
+        ...newComment,
+        _id: "temp-" + Date.now(),
+        createdAt: new Date().toISOString(),
+      });
+
+      return { ...old };
+    });
+
+    return { previousData };
+  },
+
+  onError: (_err, _newTodo, context) => {
+    queryClient.setQueryData(["comments", postId], context?.previousData);
+  },
+
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["comments", postId] });
+  },
+});
+
+
+
+  /* =========================
+     DELETE COMMENT
+  ========================= */
   const deleteComment = useMutation({
-    // ✅ Updated to accept object with commentId AND userId
-    mutationFn: async (payload: DeleteCommentPayload) => {
+    mutationFn: async ({ commentId }: DeleteCommentPayload) => {
       const res = await fetch("/api/comments", {
+        credentials: "include",
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ commentId }),
       });
-      if (!res.ok) throw new Error("Failed to delete comment");
+
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || "Failed to delete comment");
+      }
+
+      return json.data;
     },
+
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["comments", postId] });
+      queryClient.invalidateQueries({
+        queryKey: ["comments", postId],
+      });
     },
   });
 

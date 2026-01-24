@@ -1,4 +1,3 @@
-// src/components/comment/CommentItem.tsx
 import { memo, useState, KeyboardEvent } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Minus } from "lucide-react";
@@ -12,8 +11,8 @@ import Image from "next/image";
 
 interface CommentUser {
   _id: string;
-  name: string;
-  username: string;
+  name?: string;
+  username?: string;
   image?: string;
 }
 
@@ -21,7 +20,8 @@ export interface Comment {
   _id: string;
   text: string;
   createdAt: string;
-  userId: CommentUser;
+  userId?: CommentUser | null;
+  parentId?: string | null;
   replies?: Comment[];
   isDeleted?: boolean;
 }
@@ -33,10 +33,6 @@ interface CommentItemProps {
   onDelete: (commentId: string) => void;
   depth?: number;
 }
-
-/* ------------------------------------------------------------------ */
-/* Constants                                                          */
-/* ------------------------------------------------------------------ */
 
 const MAX_DEPTH = 3;
 
@@ -58,28 +54,19 @@ function CommentItem({
   const [areRepliesOpen, setAreRepliesOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  const hasReplies = Boolean(comment.replies?.length);
-  const avatarSize = depth === 0 ? 32 : 28;
+  const replies = comment.replies ?? [];
+  const hasReplies = replies.length > 0;
 
-  /* ----------------------------- */
-  /* Soft Deleted State            */
-  /* ----------------------------- */
+  /* ---------- SAFE USER FALLBACKS ---------- */
+  const user = comment.userId;
+  const username = user?.username ?? "#";
+  const name = user?.name ?? "User";
+  const avatar =
+    imageError || !user?.image ? "/avatar.png" : user.image;
 
-  if (comment.isDeleted) {
-    return (
-      <div
-        className="ms-5 text-muted fst-italic"
-        style={{ fontSize: "0.85rem" }}
-        role="status"
-      >
-        This comment was deleted
-      </div>
-    );
-  }
+  const avatarSize = depth === 0 ? 32 : 24;
 
-  /* ----------------------------- */
-  /* Handlers                      */
-  /* ----------------------------- */
+  /* ---------- Handlers ---------- */
 
   const handleSendReply = () => {
     if (!replyText.trim()) return;
@@ -96,28 +83,58 @@ function CommentItem({
     }
   };
 
-  /* ----------------------------- */
-  /* Render                        */
-  /* ----------------------------- */
+  /* ---------- Deleted Comment View ---------- */
+  if (comment.isDeleted) {
+    return (
+      <div
+        className="py-2 text-muted fst-italic border rounded bg-light px-3 mb-2"
+        style={{ fontSize: "0.85rem" }}
+      >
+        This comment has been deleted.
+        {hasReplies && (
+          <button
+            className="btn btn-link btn-sm p-0 ms-2"
+            onClick={() => setAreRepliesOpen((v) => !v)}
+          >
+            {areRepliesOpen ? "Hide" : "Show"} replies
+          </button>
+        )}
+
+        {areRepliesOpen && hasReplies && (
+          <div className="ms-4 mt-2">
+            {replies.map((r) => (
+              <MemoCommentItem
+                key={r._id}
+                comment={r}
+                currentUserId={currentUserId}
+                onReply={onReply}
+                onDelete={onDelete}
+                depth={depth + 1}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  /* ---------- Render ---------- */
 
   return (
-    <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+    <motion.div
+      layout
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="d-flex flex-column"
+    >
       <div className="d-flex gap-2 mb-2">
-        <Link
-          href={`/profile/${comment.userId.username}`}
-          className="flex-shrink-0"
-          aria-label={`Visit ${comment.userId.name}'s profile`}
-        >
+        <Link href={`/profile/${username}`} className="flex-shrink-0">
           <Image
-            src={
-              imageError || !comment.userId.image
-                ? "/default-avatar.png"
-                : comment.userId.image
-            }
+            src={avatar}
             width={avatarSize}
             height={avatarSize}
-            className="rounded-circle"
-            alt={`${comment.userId.name}'s avatar`}
+            className="rounded-circle object-fit-cover"
+            alt={name}
             onError={() => setImageError(true)}
           />
         </Link>
@@ -126,12 +143,13 @@ function CommentItem({
           {/* Header */}
           <div className="d-flex align-items-baseline gap-2">
             <Link
-              href={`/profile/${comment.userId.username}`}
+              href={`/profile/${username}`}
               className="fw-semibold text-dark text-decoration-none"
+              style={{ fontSize: "0.9rem" }}
             >
-              {comment.userId.name}
+              {name}
             </Link>
-            <span className="text-muted" style={{ fontSize: "0.75rem" }}>
+            <span className="text-muted small">
               {formatDistanceToNow(new Date(comment.createdAt), {
                 addSuffix: true,
               })}
@@ -139,24 +157,26 @@ function CommentItem({
           </div>
 
           {/* Body */}
-          <p className="mb-1" style={{ fontSize: "0.95rem", lineHeight: 1.4 }}>
+          <p
+            className="mb-1 text-break"
+            style={{ fontSize: "0.95rem", whiteSpace: "pre-wrap" }}
+          >
             {comment.text}
           </p>
 
           {/* Actions */}
-          <div className="d-flex gap-3">
+          <div className="d-flex gap-3 align-items-center">
             <button
-              className="btn btn-link p-0 text-muted"
-              style={{ fontSize: "0.8rem" }}
+              className="btn btn-link p-0 text-muted text-decoration-none"
+              style={{ fontSize: "0.8rem", fontWeight: 500 }}
               onClick={() => setIsReplying((v) => !v)}
-              aria-expanded={isReplying}
             >
               Reply
             </button>
 
-            {comment.userId._id === currentUserId && (
+            {user?._id === currentUserId && (
               <button
-                className="btn btn-link p-0 text-danger"
+                className="btn btn-link p-0 text-danger text-decoration-none"
                 style={{ fontSize: "0.8rem" }}
                 onClick={() => onDelete(comment._id)}
               >
@@ -169,23 +189,24 @@ function CommentItem({
           <AnimatePresence>
             {isReplying && (
               <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
+                initial={{ opacity: 0, y: -10, height: 0 }}
+                animate={{ opacity: 1, y: 0, height: "auto" }}
+                exit={{ opacity: 0, y: -10, height: 0 }}
                 className="mt-2"
               >
-                <div className="d-flex gap-2">
+                <div className="d-flex gap-2 align-items-start">
                   <textarea
                     rows={1}
-                    className="form-control form-control-sm rounded-pill"
-                    placeholder={`Reply to ${comment.userId.name}`}
+                    className="form-control form-control-sm"
+                    placeholder={`Replying to ${name}...`}
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
                     onKeyDown={handleKeyDown}
                     autoFocus
+                    style={{ resize: "none", borderRadius: "12px" }}
                   />
                   <button
-                    className="btn btn-link text-primary"
+                    className="btn btn-sm btn-primary rounded-pill px-3"
                     disabled={!replyText.trim()}
                     onClick={handleSendReply}
                   >
@@ -200,30 +221,25 @@ function CommentItem({
 
       {/* Replies */}
       {hasReplies && (
-        <div className="ms-5">
+        <div className="ms-4 ps-2">
           {!areRepliesOpen ? (
             <button
-              className="btn btn-link p-0 text-muted fw-semibold"
-              style={{ fontSize: "0.8rem" }}
+              className="btn btn-link p-0 text-muted text-decoration-none d-flex align-items-center gap-2 mb-2"
+              style={{ fontSize: "0.8rem", fontWeight: 600 }}
               onClick={() => setAreRepliesOpen(true)}
             >
-              View {comment.replies!.length}{" "}
-              {comment.replies!.length === 1 ? "reply" : "replies"}
+              <div
+                style={{ width: "20px", height: "1px", background: "#ccc" }}
+              />
+              View {replies.length}{" "}
+              {replies.length === 1 ? "reply" : "replies"}
             </button>
           ) : (
-            <div className="position-relative">
-              <div
-                className="position-absolute border-start"
-                style={{
-                  left: "-16px",
-                  top: 0,
-                  bottom: 0,
-                  borderColor: "#e5e5e5",
-                }}
-                aria-hidden="true"
-              />
-
-              {comment.replies!.map((reply) => (
+            <div
+              className="position-relative border-start ps-3"
+              style={{ borderColor: "#e5e5e5" }}
+            >
+              {replies.map((reply) => (
                 <MemoCommentItem
                   key={reply._id}
                   comment={reply}
@@ -235,12 +251,11 @@ function CommentItem({
               ))}
 
               <button
-                className="btn btn-link p-0 text-muted mt-1"
-                style={{ fontSize: "0.8rem" }}
+                className="btn btn-link p-0 text-muted mt-1 text-decoration-none"
+                style={{ fontSize: "0.75rem" }}
                 onClick={() => setAreRepliesOpen(false)}
               >
-                <Minus size={12} className="me-1" />
-                Hide replies
+                <Minus size={12} className="me-1" /> Hide replies
               </button>
             </div>
           )}

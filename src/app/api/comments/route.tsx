@@ -1,271 +1,254 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { connectDB } from "@/lib/db/connect";
 import { Comment } from "@/lib/models/Comment";
+import Post from "@/lib/models/Post";
 import { Types } from "mongoose";
 import { pusherServer } from "@/lib/pusher";
 import { Notification as NotificationModel } from "@/lib/models/Notification";
-import Post from "@/lib/models/Post";
-import { isFollower } from "@/lib/helpers/isFollower";
 import { isBlocked } from "@/lib/helpers/isBlocked";
-import User from "@/lib/models/User";
 import { canViewFullProfile } from "@/lib/helpers/privacyGuard";
+import { rateLimit } from "@/lib/rateLimit";
+import { apiSuccess, apiError } from "@/lib/apiResponse";
+import { auth } from "@/lib/auth";
 
-/* =========================
+/* =====================================================
    POST – CREATE COMMENT
-========================= */
+===================================================== */
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
 
-    const { userId, postId, text, parentId } = await request.json();
+    const session = await auth();
+const userId = session?.user?.id;
+    if (!userId) return apiError("Unauthorized", 401);
 
-    /* ---------- Validation ---------- */
-    if (!userId || !postId || !text) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
+    // Rate limit: create comment
+    if (!(await rateLimit(`comment:${userId}`, 5, 30_000))) {
+      return apiError("Too many comments. Slow down.", 429);
+    }
+
+    const { postId, text, parentId } = await request.json();
+    if (!postId || !text) {
+      return apiError("postId and text required", 400);
     }
 
     if (text.trim().length === 0 || text.length > 1000) {
-      return NextResponse.json(
-        { error: "Comment must be 1–1000 characters" },
-        { status: 400 }
-      );
+      return apiError("Comment must be 1–1000 characters", 400);
     }
 
-    /* ---------- Fetch Post ---------- */
-    const post = await Post.findById(postId);
-    if (!post) {
-      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    if (!Types.ObjectId.isValid(postId)) {
+      return apiError("Invalid postId", 400);
     }
 
-    const commenterId = userId.toString();
+    const post = await Post.findById(postId).select("userId").lean();
+    if (!post) return apiError("Post not found", 404);
+
+    const commenterId = userId;
     const postOwnerId = post.userId.toString();
 
-    /* ---------- Privacy & Block Checks ---------- */
+    // Privacy & block checks
     if (!(await canViewFullProfile(commenterId, postOwnerId))) {
-      return NextResponse.json(
-        { error: "You cannot comment on this post" },
-        { status: 403 }
-      );
+      return apiError("Forbidden", 403);
     }
 
     if (await isBlocked(commenterId, postOwnerId)) {
-      return NextResponse.json(
-        { error: "You cannot comment on this post" },
-        { status: 403 }
-      );
+      return apiError("Blocked", 403);
     }
 
-    /* ---------- Owner Settings ---------- */
-    const postOwner = await User.findById(post.userId)
-      .select("commentPermission notificationComments")
-      .lean();
+    // Parent validation (single fetch)
+    let parentComment = null;
+    if (parentId) {
+      if (!Types.ObjectId.isValid(parentId)) {
+        return apiError("Invalid parent comment", 400);
+      }
 
-    if (!postOwner) {
-      return NextResponse.json(
-        { error: "Post owner not found" },
-        { status: 404 }
-      );
+      parentComment = await Comment.findById(parentId);
+      if (!parentComment || parentComment.postId.toString() !== postId) {
+        return apiError("Invalid parent comment", 400);
+      }
     }
 
-    if (
-      postOwner.commentPermission === "followers" &&
-      !(await isFollower(commenterId, postOwnerId))
-    ) {
-      return NextResponse.json(
-        { error: "Only followers can comment" },
-        { status: 403 }
-      );
-    }
-
-    /* ---------- Create Comment ---------- */
     const comment = await Comment.create({
-      userId: new Types.ObjectId(commenterId),
-      postId: new Types.ObjectId(postId),
-      parentId: parentId ? new Types.ObjectId(parentId) : null,
+      userId: commenterId,
+      postId,
+      parentId: parentId || null,
       text: text.trim(),
     });
 
-    /* ---------- Notification ---------- */
-    if (
-      commenterId !== postOwnerId &&
-      postOwner.notificationComments !== false &&
-      !(await isBlocked(commenterId, postOwnerId))
-    ) {
+    // 🔔 Post owner notification
+    if (commenterId !== postOwnerId) {
       await NotificationModel.create({
         user: post.userId,
         sender: commenterId,
         type: "comment",
-        postId: post._id,
-        read: false,
-        message: text.trim().slice(0, 100),
+        postId,
+        message: text.slice(0, 100),
       });
     }
 
-    /* ---------- Populate for Response ---------- */
-    const populatedComment = await Comment.findById(comment._id)
+    // 🔔 Reply notification
+   if (parentComment && parentComment.userId.toString() !== commenterId) {
+  await NotificationModel.create({
+    user: parentComment.userId, // Jiske comment par reply kiya
+    sender: commenterId,        // Jisne reply kiya (Owner or anyone)
+    type: "reply",              // Type ko "reply" rakhein (Enum update karne ke baad)
+    postId,
+    message: text.slice(0, 100), // Actual reply text dikhayein
+  });
+
+  // 🔥 Optional: Pusher trigger for real-time notification
+  await pusherServer.trigger(`user-notifications-${parentComment.userId}`, "new-notification", {});
+}
+
+    const populated = await Comment.findById(comment._id)
       .populate("userId", "name image username")
       .lean();
 
-    /* ---------- Realtime Update ---------- */
     await pusherServer.trigger(`comments-${postId}`, "new-comment", {
-      comment: populatedComment,
+      comment: populated,
     });
 
-    return NextResponse.json(populatedComment, { status: 201 });
-  } catch (error) {
-    console.error("CREATE_COMMENT_ERROR:", error);
-    return NextResponse.json(
-      { error: "Failed to create comment" },
-      { status: 500 }
-    );
+    return apiSuccess(populated);
+  } catch (err) {
+    console.error("CREATE_COMMENT_ERROR:", err);
+    return apiError("Failed to create comment", 500);
   }
 }
 
-/* =========================
-   GET – FETCH COMMENTS
-========================= */
+/* =====================================================
+   GET – FETCH COMMENTS (CURSOR + PRIVACY SAFE)
+===================================================== */
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
 
+    const session = await auth();
+const viewerId = session?.user?.id ?? null;
+
+
+    // Rate limit: fetch comments
+    if (
+      !(await rateLimit(
+        `get-comments:${viewerId ?? "guest"}`,
+        60,
+        60_000
+      ))
+    ) {
+      return apiError("Too many requests.", 429);
+    }
+
     const { searchParams } = new URL(request.url);
     const postId = searchParams.get("postId");
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "5");
-    const viewerIdRaw = searchParams.get("viewerId");
-
-    const viewerId =
-      viewerIdRaw && Types.ObjectId.isValid(viewerIdRaw)
-        ? viewerIdRaw
-        : null;
+    const cursor = searchParams.get("cursor");
+    const limit = Math.min(Number(searchParams.get("limit") || 20), 50);
 
     if (!postId || !Types.ObjectId.isValid(postId)) {
-      return NextResponse.json(
-        { error: "Post ID is required" },
-        { status: 400 }
-      );
+      return apiError("Invalid postId", 400);
     }
 
     const post = await Post.findById(postId).select("userId").lean();
-    if (!post) {
-      return NextResponse.json({ error: "Post not found" }, { status: 404 });
-    }
+    if (!post) return apiError("Post not found", 404);
 
     const ownerId = post.userId.toString();
 
     if (viewerId && (await isBlocked(viewerId, ownerId))) {
-      return NextResponse.json(
-        { error: "You cannot view these comments" },
-        { status: 403 }
-      );
+      return apiError("Forbidden", 403);
     }
 
     if (!(await canViewFullProfile(viewerId, ownerId))) {
-      return NextResponse.json(
-        { comments: [], total: 0, page, hasMore: false },
-        { status: 200 }
-      );
+      return apiSuccess({ comments: [], nextCursor: null });
     }
 
-    const allComments = await Comment.find({
-      postId: new Types.ObjectId(postId),
-    })
+    const query: any = { postId };
+    if (cursor && Types.ObjectId.isValid(cursor)) {
+      query._id = { $lt: new Types.ObjectId(cursor) };
+    }
+
+    const comments = await Comment.find(query)
       .populate("userId", "name image username")
-      .sort({ createdAt: -1 })
+      .sort({ _id: -1 })
+      .limit(limit + 1)
       .lean();
 
-    const visibleComments = [];
-    for (const c of allComments) {
-      const blocked =
-        viewerId && (await isBlocked(viewerId, c.userId._id.toString()));
-      if (!blocked) visibleComments.push(c);
-    }
+    const hasMore = comments.length > limit;
+    const items = hasMore ? comments.slice(0, limit) : comments;
 
-    const map = new Map<string, any>();
-    visibleComments.forEach((c) =>
-      map.set(c._id.toString(), { ...c, replies: [] })
-    );
-
-    const roots: any[] = [];
-    visibleComments.forEach((c) => {
-      if (c.parentId) {
-        const parent = map.get(c.parentId.toString());
-        if (parent) parent.replies.push(map.get(c._id.toString()));
-      } else {
-        roots.push(map.get(c._id.toString()));
-      }
+    return apiSuccess({
+      comments: items,
+      nextCursor: hasMore ? items[items.length - 1]._id : null,
     });
-
-    const start = (page - 1) * limit;
-    const paginated = roots.slice(start, start + limit);
-
-    return NextResponse.json({
-      comments: paginated,
-      total: roots.length,
-      page,
-      hasMore: start + paginated.length < roots.length,
-    });
-  } catch (error) {
-    console.error("FETCH_COMMENTS_ERROR:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch comments" },
-      { status: 500 }
-    );
+  } catch (err) {
+    console.error("FETCH_COMMENTS_ERROR:", err);
+    return apiError("Failed to fetch comments", 500);
   }
 }
 
-/* =========================
-   DELETE – DELETE COMMENT
-========================= */
+/* =====================================================
+   DELETE – DELETE COMMENT (SOFT + IDEMPOTENT)
+===================================================== */
 export async function DELETE(request: NextRequest) {
   try {
     await connectDB();
 
-    const { commentId, userId } = await request.json();
+    const session = await auth();
+const userId = session?.user?.id;
+    if (!userId) return apiError("Unauthorized", 401);
 
-    if (!commentId || !userId) {
-      return NextResponse.json(
-        { error: "commentId and userId are required" },
-        { status: 400 }
-      );
+    // Rate limit delete
+    if (!(await rateLimit(`delete-comment:${userId}`, 10, 60_000))) {
+      return apiError("Too many delete requests.", 429);
     }
 
-    if (!Types.ObjectId.isValid(commentId) || !Types.ObjectId.isValid(userId)) {
-      return NextResponse.json(
-        { error: "Invalid IDs" },
-        { status: 400 }
-      );
+    const { commentId } = await request.json();
+    if (!Types.ObjectId.isValid(commentId)) {
+      return apiError("Invalid commentId", 400);
     }
 
-    const comment = await Comment.findById(commentId);
-    if (!comment) {
-      return NextResponse.json({ error: "Comment not found" }, { status: 404 });
+    const rootComment = await Comment.findById(commentId);
+    if (!rootComment) {
+      // Idempotent delete
+      return apiSuccess({ commentId });
     }
 
-    if (comment.userId.toString() !== userId) {
-      return NextResponse.json(
-        { error: "Not authorized" },
-        { status: 403 }
-      );
+    if (rootComment.userId.toString() !== userId) {
+      return apiError("Forbidden", 403);
     }
 
-    await Comment.deleteOne({ _id: commentId });
+    /* -------------------------
+       CASCADE DELETE
+    -------------------------- */
 
+    const idsToDelete: Types.ObjectId[] = [rootComment._id];
+
+    // BFS traversal to find all replies
+    let queue: Types.ObjectId[] = [rootComment._id];
+
+    while (queue.length > 0) {
+      const children = await Comment.find({
+        parentId: { $in: queue },
+      }).select("_id");
+
+      if (children.length === 0) break;
+
+      const childIds = children.map((c) => c._id);
+      idsToDelete.push(...childIds);
+      queue = childIds;
+    }
+
+    await Comment.deleteMany({
+      _id: { $in: idsToDelete },
+    });
+
+    // 🔥 Realtime notify frontend
     await pusherServer.trigger(
-      `comments-${comment.postId}`,
+      `comments-${rootComment.postId}`,
       "delete-comment",
       { commentId }
     );
 
-    return NextResponse.json({ message: "Comment deleted successfully" });
-  } catch (error) {
-    console.error("DELETE_COMMENT_ERROR:", error);
-    return NextResponse.json(
-      { error: "Failed to delete comment" },
-      { status: 500 }
-    );
+    return apiSuccess({ commentId });
+  } catch (err) {
+    console.error("DELETE_COMMENT_ERROR:", err);
+    return apiError("Failed to delete comment", 500);
   }
 }

@@ -12,6 +12,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@tanstack/react-query": "^5.90.17",
     "@types/jsonwebtoken": "^9.0.10",
+    "@upstash/redis": "^1.36.1",
     "@vercel/analytics": "^1.5.0",
     "bcryptjs": "^3.0.2",
     "bootstrap": "^5.3.8",

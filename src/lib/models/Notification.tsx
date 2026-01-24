@@ -17,7 +17,7 @@ const NotificationSchema = new Schema<INotification>(
   {
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },
     sender: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    type: { type: String, enum: ["like", "comment", "follow", "follow_request"], required: true },
+    type: { type: String, enum: ["like", "comment", "follow", "follow_request", "reply", ], required: true },
     message: { type: String },
     postId: { type: Schema.Types.ObjectId, ref: "Post" },
     read: { type: Boolean, default: false },
@@ -30,7 +30,7 @@ const NotificationSchema = new Schema<INotification>(
 // TTL index using deleteAfterSeconds
 NotificationSchema.index(
   { createdAt: 1 },
-  { expireAfterSeconds: 0 } // We'll handle per-notification TTL via cron below
+  { expireAfterSeconds: 60 * 60 * 24 * 10 }
 );
 
 export const Notification = mongoose.models.Notification

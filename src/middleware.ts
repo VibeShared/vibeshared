@@ -14,10 +14,9 @@ export default auth((req) => {
   const userRole = session?.user?.role;
 
   // 1. PUBLIC EXEMPTIONS (The regex you had)
-  if (pathname.match(/^\/[^/]+\/post\/[^/]+$/)) {
+  if (pathname.startsWith("/api")) {
     return NextResponse.next();
   }
-
   // 2. AUTH ROUTES (Login/Signup/Forgot)
   const isAuthRoute = ["/login", "/signup", "/forgot-password"].some(route => 
     pathname.startsWith(route)
@@ -47,6 +46,3 @@ export default auth((req) => {
   return NextResponse.next();
 });
 
-export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
-};

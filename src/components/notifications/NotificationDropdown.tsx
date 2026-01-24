@@ -96,9 +96,8 @@ export default function NotificationDropdown({
     case "follow_request":
       return `${senderName} sent you a follow request`;
 
-    case "tip":
-      return n.message || `${senderName} sent you a tip 💰`;
-
+    case "reply":
+      return `${senderName} replied to your comment: "${n.message}"`;
     default:
       return `${senderName} interacted with you`;
   }

@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { pusherClient } from "@/lib/pusherClient";
 import { useComments } from "@/hooks/useComments";
-import { MemoCommentItem } from "./CommentItem";
-import { Send } from "lucide-react"; // Make sure to import icon
+import { MemoCommentItem, Comment } from "./CommentItem"; // Import Comment Type
+import { Send } from "lucide-react";
 
 interface CommentSectionProps {
   postId: string;
@@ -15,87 +15,129 @@ export default function CommentSection({ postId, currentUserId }: CommentSection
   const { commentsQuery, addComment, deleteComment } = useComments(postId);
   const [mainCommentText, setMainCommentText] = useState("");
 
-  const comments = commentsQuery.data?.pages.flatMap((p) => p.comments) ?? [];
+  // 1. Get all flat comments from React Query pages
+  const flatComments = commentsQuery.data?.pages.flatMap((p) => p.comments) ?? [];
 
-  useEffect(() => {
-    const channel = pusherClient.subscribe(`comments-${postId}`);
+  // 2. ✅ LOGIC FIX: Convert Flat List to Tree Structure
+  const rootComments = useMemo(() => {
+    const commentMap: Record<string, Comment> = {};
+    const roots: Comment[] = [];
 
-    const handleUpdate = () => {
-        commentsQuery.refetch();
-    };
+    // Clone objects to avoid mutation issues and create a Map
+    flatComments.forEach((c) => {
+      commentMap[c._id] = { ...c, replies: [] }; // Initialize empty replies array
+    });
 
-    channel.bind("new-comment", handleUpdate);
-    channel.bind("delete-comment", handleUpdate);
+    // Assemble the Tree
+    flatComments.forEach((c) => {
+      if (c.parentId && commentMap[c.parentId]) {
+        // If it has a parent, push to parent's replies
+        commentMap[c.parentId].replies!.push(commentMap[c._id]);
+      } else {
+        // If no parent (or parent not loaded yet), it's a root (for now)
+        // Note: Only strict root comments (parentId: null) should be treated as roots
+        if(!c.parentId) {
+             roots.push(commentMap[c._id]);
+        }
+      }
+    });
 
-    return () => {
-      pusherClient.unsubscribe(`comments-${postId}`);
-      channel.unbind_all(); // Good practice to unbind
-    };
-  }, [postId, commentsQuery]);
+    // Sort replies by time (Oldest first usually looks better inside a thread)
+    Object.values(commentMap).forEach(c => {
+        c.replies?.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    });
 
-  const handleSubmit = useCallback(
-    (text: string, parentId?: string) => {
-      // ✅ FIX: Pass currentUserId to the mutation
-      addComment.mutate({ 
-        userId: currentUserId, 
-        postId, 
-        text, 
-        parentId 
-      });
-    },
-    [addComment, postId, currentUserId]
-  );
+    // Sort roots by newest first
+    return roots.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [flatComments]);
+
+
+  // 🔹 Scroll after successful comment
+useEffect(() => {
+  if (addComment.isSuccess) {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+}, [addComment.isSuccess]);
+
+// 🔹 Pusher realtime updates
+useEffect(() => {
+  const channel = pusherClient.subscribe(`comments-${postId}`);
+
+  const handleUpdate = () => {
+    commentsQuery.refetch();
+  };
+
+  channel.bind("new-comment", handleUpdate);
+  channel.bind("delete-comment", handleUpdate);
+
+  return () => {
+    channel.unbind("new-comment", handleUpdate);
+    channel.unbind("delete-comment", handleUpdate);
+    pusherClient.unsubscribe(`comments-${postId}`);
+  };
+}, [postId]);
+
 
   const handleMainSubmit = () => {
-      if(!mainCommentText.trim()) return;
-      handleSubmit(mainCommentText);
-      setMainCommentText("");
-  }
+    if (!mainCommentText.trim()) return;
+    addComment.mutate({ postId, text: mainCommentText }); // No parentId for main comments
+    setMainCommentText("");
+  };
 
-  // ✅ FIX: Pass userId to the delete mutation
+  const handleReplySubmit = useCallback((text: string, parentId: string) => {
+      addComment.mutate({ postId, text, parentId });
+  }, [addComment, postId]);
+
   const handleDelete = useCallback((commentId: string) => {
-      deleteComment.mutate({ commentId, userId: currentUserId });
-  }, [deleteComment, currentUserId]);
+    deleteComment.mutate({ commentId });
+  }, [deleteComment]);
 
-  if (commentsQuery.isLoading) return <div>Loading comments…</div>;
+  if (commentsQuery.isLoading) return <div className="p-4 text-center text-muted">Loading comments...</div>;
 
   return (
     <div className="mt-3">
-      {/* ✅ Added a main input box for top-level comments */}
+      {/* Main Input Box */}
       <div className="d-flex gap-2 mb-4">
-          <input 
-            className="form-control"
-            placeholder="Write a comment..."
-            value={mainCommentText}
-            onChange={(e) => setMainCommentText(e.target.value)}
-          />
-          <button 
-            className="btn btn-primary" 
-            onClick={handleMainSubmit}
-            disabled={addComment.isPending}
-          >
-             <Send size={18} />
-          </button>
+        <input
+          className="form-control"
+          placeholder="Write a comment..."
+          value={mainCommentText}
+          onChange={(e) => setMainCommentText(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleMainSubmit()}
+        />
+        <button
+          className="btn btn-primary"
+          onClick={handleMainSubmit}
+          disabled={addComment.isPending || !mainCommentText.trim()}
+        >
+          <Send size={18} />
+        </button>
       </div>
 
+      {/* Render Root Comments Only (Recursion handles the rest) */}
       <div className="d-flex flex-column gap-3">
-        {comments.map((comment) => (
+        {rootComments.map((comment) => (
           <MemoCommentItem
             key={comment._id}
             comment={comment}
             currentUserId={currentUserId}
-            onReply={handleSubmit}
-            onDelete={handleDelete} // Use the new handler that includes userId
+            onReply={handleReplySubmit}
+            onDelete={handleDelete}
           />
         ))}
+        
+        {rootComments.length === 0 && (
+            <div className="text-center text-muted my-3">No comments yet. Be the first!</div>
+        )}
       </div>
 
       {commentsQuery.hasNextPage && (
         <button
-          className="btn btn-outline-secondary btn-sm mt-3"
+          className="btn btn-outline-secondary btn-sm mt-3 w-100"
           onClick={() => commentsQuery.fetchNextPage()}
+          disabled={commentsQuery.isFetchingNextPage}
         >
-          {commentsQuery.isFetchingNextPage ? "Loading..." : "Load more"}
+          {commentsQuery.isFetchingNextPage ? "Loading..." : "Load more comments"}
         </button>
       )}
     </div>
