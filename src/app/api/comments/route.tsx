@@ -252,3 +252,47 @@ const userId = session?.user?.id;
     return apiError("Failed to delete comment", 500);
   }
 }
+
+
+
+/* =====================================================
+    PATCH – EDIT COMMENT
+===================================================== */
+export async function PATCH(request: NextRequest) {
+  try {
+    await connectDB();
+    const session = await auth();
+    const userId = session?.user?.id;
+    if (!userId) return apiError("Unauthorized", 401);
+
+    const { commentId, text } = await request.json();
+
+    if (!commentId || !text || text.trim().length === 0) {
+      return apiError("Comment text is required", 400);
+    }
+
+    const comment = await Comment.findById(commentId);
+    if (!comment) return apiError("Comment not found", 404);
+
+    // Check ownership
+    if (comment.userId.toString() !== userId) {
+      return apiError("Forbidden: You can only edit your own comments", 403);
+    }
+
+    // Update and mark as edited
+    comment.text = text.trim();
+    comment.isEdited = true; // Optional: Schema mein add kar sakte ho
+    await comment.save();
+
+    // Real-time update via Pusher
+    await pusherServer.trigger(`comments-${comment.postId}`, "edit-comment", {
+      commentId,
+      text: comment.text,
+    });
+
+    return apiSuccess(comment);
+  } catch (err) {
+    console.error("EDIT_COMMENT_ERROR:", err);
+    return apiError("Failed to edit comment", 500);
+  }
+}

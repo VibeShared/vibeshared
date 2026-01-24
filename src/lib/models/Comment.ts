@@ -5,6 +5,7 @@ import { IPost } from "./Post";
 export interface IComment extends Document {
   userId: IUser["_id"];
   postId: IPost["_id"];
+  isEdited: boolean;
   parentId?: IComment["_id"] | null;
   text: string;
   createdAt: Date;
@@ -34,6 +35,7 @@ const CommentSchema: Schema<IComment> = new Schema(
       trim: true,
       maxLength: 1000,
     },
+    isEdited: { type: Boolean, default: false },
   },
   {
     timestamps: true,

@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { pusherClient } from "@/lib/pusherClient";
 import { useComments } from "@/hooks/useComments";
-import { MemoCommentItem, Comment } from "./CommentItem"; // Import Comment Type
-import { Send } from "lucide-react";
+import { MemoCommentItem, Comment } from "./CommentItem";
+import { Send, Loader2 } from "lucide-react"; // Loader icon for better UX
 
 interface CommentSectionProps {
   postId: string;
@@ -12,109 +12,104 @@ interface CommentSectionProps {
 }
 
 export default function CommentSection({ postId, currentUserId }: CommentSectionProps) {
-  const { commentsQuery, addComment, deleteComment } = useComments(postId);
+  // 1. Hook se editComment mutation bhi nikal lo
+  const { commentsQuery, addComment, deleteComment, editComment } = useComments(postId);
   const [mainCommentText, setMainCommentText] = useState("");
 
-  // 1. Get all flat comments from React Query pages
   const flatComments = commentsQuery.data?.pages.flatMap((p) => p.comments) ?? [];
 
-  // 2. ✅ LOGIC FIX: Convert Flat List to Tree Structure
+  // ✅ Tree Structure Logic (Same as yours, optimized)
   const rootComments = useMemo(() => {
     const commentMap: Record<string, Comment> = {};
     const roots: Comment[] = [];
 
-    // Clone objects to avoid mutation issues and create a Map
     flatComments.forEach((c) => {
-      commentMap[c._id] = { ...c, replies: [] }; // Initialize empty replies array
+      commentMap[c._id] = { ...c, replies: [] };
     });
 
-    // Assemble the Tree
     flatComments.forEach((c) => {
       if (c.parentId && commentMap[c.parentId]) {
-        // If it has a parent, push to parent's replies
         commentMap[c.parentId].replies!.push(commentMap[c._id]);
-      } else {
-        // If no parent (or parent not loaded yet), it's a root (for now)
-        // Note: Only strict root comments (parentId: null) should be treated as roots
-        if(!c.parentId) {
-             roots.push(commentMap[c._id]);
-        }
+      } else if (!c.parentId) {
+        roots.push(commentMap[c._id]);
       }
     });
 
-    // Sort replies by time (Oldest first usually looks better inside a thread)
+    // Nested sorting
     Object.values(commentMap).forEach(c => {
-        c.replies?.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      c.replies?.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     });
 
-    // Sort roots by newest first
     return roots.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [flatComments]);
 
+  // 🔹 Pusher Realtime Updates (Added 'edit-comment' binding)
+  useEffect(() => {
+    const channel = pusherClient.subscribe(`comments-${postId}`);
 
-  // 🔹 Scroll after successful comment
-useEffect(() => {
-  if (addComment.isSuccess) {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-}, [addComment.isSuccess]);
+    const handleUpdate = () => {
+      commentsQuery.refetch();
+    };
 
-// 🔹 Pusher realtime updates
-useEffect(() => {
-  const channel = pusherClient.subscribe(`comments-${postId}`);
+    channel.bind("new-comment", handleUpdate);
+    channel.bind("delete-comment", handleUpdate);
+    channel.bind("edit-comment", handleUpdate); // 🔥 Add this for realtime edits
 
-  const handleUpdate = () => {
-    commentsQuery.refetch();
-  };
+    return () => {
+      channel.unbind_all(); // Clean way to unbind
+      pusherClient.unsubscribe(`comments-${postId}`);
+    };
+  }, [postId, commentsQuery]);
 
-  channel.bind("new-comment", handleUpdate);
-  channel.bind("delete-comment", handleUpdate);
-
-  return () => {
-    channel.unbind("new-comment", handleUpdate);
-    channel.unbind("delete-comment", handleUpdate);
-    pusherClient.unsubscribe(`comments-${postId}`);
-  };
-}, [postId]);
-
-
+  // 🔹 Handlers
   const handleMainSubmit = () => {
     if (!mainCommentText.trim()) return;
-    addComment.mutate({ postId, text: mainCommentText }); // No parentId for main comments
+    addComment.mutate({ postId, text: mainCommentText });
     setMainCommentText("");
   };
 
   const handleReplySubmit = useCallback((text: string, parentId: string) => {
-      addComment.mutate({ postId, text, parentId });
+    addComment.mutate({ postId, text, parentId });
   }, [addComment, postId]);
 
   const handleDelete = useCallback((commentId: string) => {
     deleteComment.mutate({ commentId });
   }, [deleteComment]);
 
+  // ✅ New Edit Handler
+  const handleEdit = useCallback((commentId: string, text: string) => {
+    editComment.mutate({ commentId, text });
+  }, [editComment]);
+
   if (commentsQuery.isLoading) return <div className="p-4 text-center text-muted">Loading comments...</div>;
 
   return (
-    <div className="mt-3">
+    <div className="mt-3 container-fluid px-0">
       {/* Main Input Box */}
+      <div className="d-flex gap-2 mb-4 sticky-bottom bg-white p-2 border-top shadow-sm d-md-none" 
+           style={{ zIndex: 10, bottom: 0 }}>
+         {/* Mobile par input box niche sticky hona chahiye, ye ek option hai */}
+      </div>
+
       <div className="d-flex gap-2 mb-4">
         <input
-          className="form-control"
+          className="form-control shadow-sm"
           placeholder="Write a comment..."
           value={mainCommentText}
           onChange={(e) => setMainCommentText(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleMainSubmit()}
+          style={{ borderRadius: "20px" }}
         />
         <button
-          className="btn btn-primary"
+          className="btn btn-primary rounded-circle"
           onClick={handleMainSubmit}
           disabled={addComment.isPending || !mainCommentText.trim()}
         >
-          <Send size={18} />
+          {addComment.isPending ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
         </button>
       </div>
 
-      {/* Render Root Comments Only (Recursion handles the rest) */}
+      {/* Comment List */}
       <div className="d-flex flex-column gap-3">
         {rootComments.map((comment) => (
           <MemoCommentItem
@@ -123,21 +118,23 @@ useEffect(() => {
             currentUserId={currentUserId}
             onReply={handleReplySubmit}
             onDelete={handleDelete}
+            onEdit={handleEdit} // ✅ Passing Edit Prop
           />
         ))}
         
         {rootComments.length === 0 && (
-            <div className="text-center text-muted my-3">No comments yet. Be the first!</div>
+            <div className="text-center text-muted my-5">No comments yet. Start the conversation!</div>
         )}
       </div>
 
+      {/* Infinite Scroll Button */}
       {commentsQuery.hasNextPage && (
         <button
-          className="btn btn-outline-secondary btn-sm mt-3 w-100"
+          className="btn btn-link text-decoration-none btn-sm mt-3 w-100 text-muted fw-bold"
           onClick={() => commentsQuery.fetchNextPage()}
           disabled={commentsQuery.isFetchingNextPage}
         >
-          {commentsQuery.isFetchingNextPage ? "Loading..." : "Load more comments"}
+          {commentsQuery.isFetchingNextPage ? "Loading more..." : "Show more comments"}
         </button>
       )}
     </div>

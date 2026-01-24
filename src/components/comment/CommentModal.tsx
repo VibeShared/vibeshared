@@ -1,4 +1,3 @@
-//src/components/comment/CommentModal.tsx
 "use client";
 
 import { Modal } from "react-bootstrap";
@@ -18,12 +17,28 @@ export default function CommentModal({
   if (!postId) return null;
 
   return (
-    <Modal show onHide={onClose} centered size="lg">
-      <Modal.Header closeButton>
-        <Modal.Title>Comments</Modal.Title>
+    <Modal 
+      show={!!postId} 
+      onHide={onClose} 
+      centered 
+      size="lg"
+      // Mobile par niche se upar aane wali feel ke liye (Drawer style)
+      contentClassName="rounded-top-4 overflow-hidden border-0"
+      className="p-0 p-md-default"
+    >
+      <Modal.Header closeButton className="border-bottom-0 pb-0">
+        <Modal.Title className="fw-bold h5">Comments</Modal.Title>
       </Modal.Header>
 
-      <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
+      <Modal.Body 
+        style={{ 
+          height: "80vh", // Thodi height badha di hai mobile view ke liye
+          maxHeight: "80vh", 
+          overflowY: "auto",
+          WebkitOverflowScrolling: "touch" // Smooth scrolling for iOS
+        }}
+        className="pt-0"
+      >
         <CommentSection
           postId={postId}
           currentUserId={currentUserId}
